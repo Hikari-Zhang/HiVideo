@@ -3,3 +3,6 @@
 
 # WorkBuddy local data
 .workbuddy/
+
+# Claude Code local config
+.claude/
