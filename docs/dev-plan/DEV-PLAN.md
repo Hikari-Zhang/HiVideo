@@ -9,10 +9,11 @@
 
 | 阶段 | 状态 | 计划周 | 完成度 |
 |---|---|---|---|
-| Phase 0 · hipixel-core 内核抽离 + CLI | ⏸ 未开始 | 3 周 | 0% |
+| Phase 0 · hipixel-core 内核抽离 + CLI（**Python 优先**） | 🔄 进行中 | 3 周 | ~80% |
 | **Phase 0.5 · UI/UX 设计与原型** | ⏸ 未开始 | **3 周** | 0% |
 | Phase 1 · HiVideo MVP 播放器 | ⏸ 未开始 | 6 周 | 0% |
 | Phase 2 · HiPixel MVP Web 服务 | ⏸ 未开始 | 5 周 | 0% |
+| **Phase 2.5 · hipixel-core Rust 内核迁移** | ⏸ 未开始 | **3 周** | 0% |
 | Phase 3 · HiVideo AI 入场 | ⏸ 未开始 | 6 周 | 0% |
 | Phase 4 · HiPixel 分布式 + Windows | ⏸ 未开始 | 4 周 | 0% |
 | Phase 5 · 智能管家（角色 / 摘要 / 跳过） | ⏸ 未开始 | 4 周 | 0% |
@@ -21,97 +22,99 @@
 | Phase 8 · 远程节点联动 | ⏸ 未开始 | 3 周 | 0% |
 | Phase 9 · 扩展插件 + 系统集成 | ⏸ 未开始 | 4 周 | 0% |
 | Phase 10 · 打磨 + 上线 | ⏸ 未开始 | 4 周 | 0% |
-| **合计** | — | **49 周** | **0%** |
+| **合计** | — | **52 周** | **0%** |
 
 > 状态图例：⏸ 未开始 / 🔄 进行中 / ✅ 完成 / ⚠ 阻塞 / ❌ 取消
 > 设计与编码并行：Phase 0.5 和 Phase 0 可大部分并行（设计师 / 工程师不同人）。每个后续 Phase 都包含「设计先行 → 评审 → 编码」的子流程，避免代码做完才发现 UI 要返工。
+> **语言策略**：Phase 0 Python 优先快速验证 AI 效果；Phase 2.5 将视频 I/O 和帧处理层迁移到 Rust，完成后 Phase 3 HiVideo 才能通过 Swift FFI 调用 hipixel-core。
 
 ---
 
 ## Phase 0 · hipixel-core 内核抽离 + CLI（3 周）🔴
 
 > 目标：跑通 `hipixel-core enhance input.mp4 --preset old-film-revival -o output.mp4`
+> **语言策略（已决策）**：Python 优先——整个 Phase 0 用纯 Python 实现，快速验证 AI 效果与流水线可行性。Rust 内核迁移在 Phase 2.5 进行。
 
 ### 0.1 项目骨架（Day 1-2）
 
-- [ ] 🔴 创建 monorepo 仓库 `hipixel-core/`
-- [ ] 🔴 选择主语言（推荐 Rust 内核 + Python 高层胶水）
-- [ ] 🔴 配置 Cargo workspace + Python pyproject.toml
+- [x] 🔴 在 HiVideo monorepo 下创建 `hipixel-core/` 子目录
+- [x] 🔴 ~~选择主语言~~（**已决策：Phase 0 Python 优先，Phase 2.5 迁移 Rust**）
+- [x] 🔴 配置 Python `pyproject.toml`（uv / Poetry 管理依赖）
 - [ ] 🔴 配置 GitHub Actions CI 矩阵：`macos-14` + `ubuntu-22.04` + `windows-2022`
-- [ ] 🔴 引入 FFmpeg 依赖（系统检测 / 静态链接二选一）
-- [ ] 🔴 引入 ONNX Runtime 跨平台依赖
-- [ ] 🟡 配置 `cargo fmt` + `clippy` + `ruff` + `mypy` 一致性检查
+- [x] 🔴 引入 FFmpeg 依赖（系统检测 / 静态链接二选一）
+- [x] 🔴 引入 ONNX Runtime 跨平台依赖
+- [x] 🟡 配置 `cargo fmt` + `clippy` + `ruff` + `mypy` 一致性检查
 - [ ] 🟡 写 README + LICENSE（推荐 Apache 2.0）
 
 ### 0.2 GPU 后端抽象层（Day 3-5）
 
-- [ ] 🔴 定义 `InferenceBackend` trait/protocol（init / load_model / run / cleanup）
-- [ ] 🔴 实现 CoreML 后端（macOS / Apple Silicon）
-- [ ] 🔴 实现 CUDA 后端（Linux / Windows + NVIDIA）
+- [x] 🔴 定义 `InferenceBackend` trait/protocol（init / load_model / run / cleanup）
+- [x] 🔴 实现 CoreML 后端（macOS / Apple Silicon）
+- [x] 🔴 实现 CUDA 后端（Linux / Windows + NVIDIA）
 - [ ] 🟡 实现 DirectML 后端（Windows + AMD / Intel）
 - [ ] 🟡 实现 OpenVINO 后端（Intel CPU / Arc）
-- [ ] 🟢 实现 CPU 兜底后端（任何平台）
-- [ ] 🔴 写 GPU 检测模块（自动选最优后端）
+- [x] 🟢 实现 CPU 兜底后端（任何平台）
+- [x] 🔴 写 GPU 检测模块（自动选最优后端）
 - [ ] 🟡 显存检测 + 不足时自动降级处理
 
 ### 0.3 视频解码 / 编码（Day 6-7）
 
-- [ ] 🔴 FFmpeg 解复用器封装（MP4 / MKV / MOV / AVI）
-- [ ] 🔴 视频解码（H.264 / H.265 软解先跑通）
+- [x] 🔴 FFmpeg 解复用器封装（MP4 / MKV / MOV / AVI）
+- [x] 🔴 视频解码（H.264 / H.265 软解先跑通）
 - [ ] 🟡 接 VideoToolbox 硬解（macOS）
 - [ ] 🟡 接 NVDEC 硬解（NVIDIA）
-- [ ] 🔴 视频编码（H.264 / H.265 软编先跑通）
+- [x] 🔴 视频编码（H.264 / H.265 软编先跑通）
 - [ ] 🟡 NVENC 硬编（NVIDIA）
 - [ ] 🟡 VideoToolbox 编码（macOS）
-- [ ] 🔴 帧格式转换（YUV ↔ RGB ↔ tensor）
-- [ ] 🟡 颜色空间处理（BT.709 / BT.2020）
+- [x] 🔴 帧格式转换（YUV ↔ RGB ↔ tensor）
+- [x] 🟡 颜色空间处理（BT.709 / BT.2020）
 
 ### 0.4 第一个滤镜 · Real-ESRGAN 超分（Day 8-10）
 
-- [ ] 🔴 下载 Real-ESRGAN-General-x2 ONNX 模型
-- [ ] 🔴 ONNX 模型加载到 InferenceBackend
-- [ ] 🔴 单帧推理跑通：input frame → output frame
-- [ ] 🔴 视频流处理：连续帧 → tile 切分 → 推理 → 拼接
-- [ ] 🟡 显存优化：动态调整 tile 大小
-- [ ] 🟡 进度回调 + 帧速率统计
-- [ ] 🟡 写单帧测试（PSNR / SSIM 验证）
+- [x] 🔴 下载 Real-ESRGAN-General-x2 ONNX 模型（registry.json 已更新真实 ONNX URL + size_bytes）
+- [x] 🔴 ONNX 模型加载到 InferenceBackend（含输入张量名自动重映射）
+- [x] 🔴 单帧推理跑通：input frame → output frame（31 个 e2e 测试覆盖，含合成 ONNX Identity 模型验证全栈：ORT 加载 → 张量重映射 → tile 拼接 → NAFNet 混合 → 3 线程 Pipeline）
+- [x] 🔴 视频流处理：连续帧 → tile 切分 → 推理 → 拼接（`RealESRGANFilter._tile_infer()` 已实现）
+- [x] 🟡 显存优化：动态调整 tile 大小（`_auto_tile_size()` 根据 VRAM 自动计算，CPU 兜底 256px，上限 1024px，步长 64px）
+- [x] 🟡 进度回调 + 帧速率统计（`FpsTracker` 滚动窗口 deque，修复 fps_current 计算 bug，`ProgressEvent` 含 fps_current / fps_avg / progress_pct）
+- [x] 🟡 写单帧测试（PSNR / SSIM 验证）（`test_metrics.py` 17 个测试 + `test_pipeline_progress.py` 12 个测试，130 个测试全部通过）
 
 ### 0.5 滤镜流水线（Day 11-12）
 
-- [ ] 🔴 定义 `Filter` trait 和 `Pipeline` 概念
+- [x] 🔴 定义 `Filter` trait 和 `Pipeline` 概念
 - [ ] 🔴 实现 Anime4K v4 滤镜（动漫超分）
-- [ ] 🔴 实现 NAFNet 降噪滤镜
-- [ ] 🟡 实现 CAS 锐化滤镜（GPU shader）
+- [x] 🔴 实现 NAFNet 降噪滤镜（`nafnet.py` 已实现，NAFNet-REDS-width64.onnx URL 已更新）
+- [x] 🟡 实现 CAS 锐化滤镜（GPU shader）
 - [ ] 🟡 实现 ACES tone-mapping（HDR→SDR）
 - [ ] 🟡 实现 RIFE 插帧滤镜
 - [ ] 🟢 实现 DeOldify 上色滤镜
-- [ ] 🔴 滤镜串联机制（Pipeline.chain([f1, f2, f3])）
+- [x] 🔴 滤镜串联机制（Pipeline.chain([f1, f2, f3])）
 - [ ] 🟡 共享纹理优化（避免多次 GPU↔CPU 拷贝）
 
 ### 0.6 预设系统（Day 13）
 
-- [ ] 🔴 定义 `Preset` JSON Schema
+- [x] 🔴 定义 `Preset` JSON Schema
 - [ ] 🔴 实现 7 个内置预设：
-  - [ ] 🔴 老片救星
-  - [ ] 🔴 番剧增强
+  - [x] 🔴 老片救星
+  - [x] 🔴 番剧增强
   - [ ] 🟡 黑白复刻
   - [ ] 🟡 HDR 兼容
   - [ ] 🟡 丝滑插帧 60fps
-  - [ ] 🟡 极致修复
-  - [ ] 🟢 最快速度
-- [ ] 🔴 预设加载与执行
+  - [x] 🟡 极致修复
+  - [x] 🟢 最快速度
+- [x] 🔴 预设加载与执行
 - [ ] 🟡 用户自定义预设支持
 
 ### 0.7 CLI 命令实现（Day 14-15）
 
-- [ ] 🔴 `hipixel-core enhance` 主命令
-- [ ] 🔴 `hipixel-core batch` 批量命令
-- [ ] 🟡 `hipixel-core presets ls` 列预设
-- [ ] 🟡 `hipixel-core models ls` 列模型
-- [ ] 🟡 `hipixel-core models download <name>` 下载模型
-- [ ] 🟡 `hipixel-core bench` 性能基准
+- [x] 🔴 `hipixel-core enhance` 主命令
+- [x] 🔴 `hipixel-core batch` 批量命令
+- [x] 🟡 `hipixel-core presets ls` 列预设
+- [x] 🟡 `hipixel-core models ls` 列模型
+- [x] 🟡 `hipixel-core models download <name>` 下载模型
+- [x] 🟡 `hipixel-core bench` 性能基准
 - [ ] 🟡 `hipixel-core demo` 演示模式
-- [ ] 🟡 进度条（indicatif / rich）
+- [x] 🟡 进度条（indicatif / rich）
 - [ ] 🟡 详细 / 安静日志级别
 
 ### 0.8 验证与基准（Day 16-18）
@@ -398,9 +401,58 @@
 
 ---
 
+## Phase 2.5 · hipixel-core Rust 内核迁移（3 周）🔴
+
+> 目标：将 Phase 0 的 Python 实现中性能关键路径迁移到 Rust，对外暴露 Python（PyO3）和 Swift（UniFFI）两套绑定。
+> **前置**：Phase 0 Python CLI 功能完整、基准数据可用。
+> **后置**：Phase 3 HiVideo AI 入场依赖 Swift binding 才能实时调用。
+
+### 2.5.1 Rust 工作区搭建（Day 1-2）
+
+- [ ] 🔴 在 `hipixel-core/` 下初始化 Cargo workspace（与 pyproject.toml 共存）
+- [ ] 🔴 配置 CI 矩阵新增 `windows-2022` / `ubuntu-22.04` Rust 测试 job
+- [ ] 🔴 引入 PyO3（Python 绑定）+ UniFFI（Swift / Kotlin 绑定）
+- [ ] 🔴 配置 `cargo fmt` + `clippy` + `cargo test` 门控
+- [ ] 🟡 配置 `cargo deny`（依赖许可证检查）
+
+### 2.5.2 视频 I/O Rust 化（Day 3-7）
+
+- [ ] 🔴 FFmpeg 系统库检测 / 静态链接（`ffmpeg-sys-next` crate）
+- [ ] 🔴 视频解码器 Rust 实现（H.264 / H.265 软解）
+- [ ] 🔴 视频编码器 Rust 实现（H.264 / H.265 软编）
+- [ ] 🔴 帧格式转换（YUV ↔ RGB ↔ tensor，Rust 侧）
+- [ ] 🟡 VideoToolbox 硬解硬编 Rust 封装（macOS）
+- [ ] 🟡 NVDEC / NVENC Rust 封装（NVIDIA）
+
+### 2.5.3 GPU 后端抽象层 Rust 化（Day 8-12）
+
+- [ ] 🔴 定义 `InferenceBackend` trait（load_model / run / cleanup）
+- [ ] 🔴 ONNX Runtime Rust 绑定（`ort` crate）
+- [ ] 🟡 CoreML 后端 Rust 封装（macOS，通过 `objc2`）
+- [ ] 🟡 CUDA 后端 Rust 封装（`cudarc` crate）
+- [ ] 🔴 GPU 自动检测模块（Rust 侧，替换 Python 版本）
+
+### 2.5.4 Python / Swift 绑定（Day 13-16）
+
+- [ ] 🔴 PyO3 暴露 `enhance()` / `Pipeline` / `Preset` 接口
+- [ ] 🔴 Python 层切换为调用 Rust 内核（CLI / Worker 无感知）
+- [ ] 🔴 UniFFI 生成 Swift binding（`.swift` + `.h`）
+- [ ] 🔴 Swift Package 封装（供 HiVideo 使用）
+- [ ] 🟡 Python wheels 构建（maturin / manylinux）
+
+### 2.5.5 一致性验证（Day 17-21）
+
+- [ ] 🔴 同一段视频，Python 纯版 vs Rust 内核版 PSNR/SSIM 差值 ≤ 0.5dB
+- [ ] 🔴 性能对比：Rust 视频 I/O 比 Python ffmpeg-python 快 ≥ 2×
+- [ ] 🟡 内存占用对比
+- [ ] 🟡 更新性能基准文档
+
+---
+
 ## Phase 3 · HiVideo AI 入场（6 周）🔴
 
 > **前置 UI 已就绪**：画质增强浮窗 / 音频增强浮窗 / 字幕菜单（Phase 0.5）
+> **前置代码**：Phase 2.5 Swift binding 完成
 
 ### 3.0 设计走查（Day 1）
 - [ ] 🔴 画质 / 音频浮窗设计稿评审通过
@@ -786,14 +838,15 @@
 - [ ] 🚩 **M0.5**：UI 设计稿冻结（Phase 0.5 末，第 6 周）
 - [ ] 🚩 **M2**：HiVideo MVP 能播视频（Phase 1 末，第 12 周）
 - [ ] 🚩 **M3**：HiPixel Web 跑通端到端（Phase 2 末，第 17 周）
-- [ ] 🚩 **M4**：HiVideo AI 字幕 + 画质增强可用（Phase 3 末，第 23 周）
-- [ ] 🚩 **M5**：HiPixel Windows 安装包发布（Phase 4 末，第 27 周）
-- [ ] 🚩 **M6**：HiVideo 角色识别可用（Phase 5 末，第 31 周）
-- [ ] 🚩 **M7**：HiVideo Beta 公开（Phase 7 末，第 41 周）
-- [ ] 🚩 **M8**：HiVideo + HiPixel 联动可用（Phase 8 末，第 44 周）
-- [ ] 🚩 **M9**：v1.0 正式发布（Phase 10 末，第 49 周）
+- [ ] 🚩 **M3.5**：hipixel-core Rust 内核 + Swift binding 完成（Phase 2.5 末，第 20 周）
+- [ ] 🚩 **M4**：HiVideo AI 字幕 + 画质增强可用（Phase 3 末，第 26 周）
+- [ ] 🚩 **M5**：HiPixel Windows 安装包发布（Phase 4 末，第 30 周）
+- [ ] 🚩 **M6**：HiVideo 角色识别可用（Phase 5 末，第 34 周）
+- [ ] 🚩 **M7**：HiVideo Beta 公开（Phase 7 末，第 44 周）
+- [ ] 🚩 **M8**：HiVideo + HiPixel 联动可用（Phase 8 末，第 47 周）
+- [ ] 🚩 **M9**：v1.0 正式发布（Phase 10 末，第 52 周）
 
-> 注：Phase 0 与 Phase 0.5 大部分并行，里程碑周数按串行最大值计算；如全程都有专人做设计可压缩到 47 周。
+> 注：Phase 0 与 Phase 0.5 大部分并行，里程碑周数按串行最大值计算。Phase 2.5 Rust 迁移为 Phase 3 的强前置依赖。
 
 ---
 
