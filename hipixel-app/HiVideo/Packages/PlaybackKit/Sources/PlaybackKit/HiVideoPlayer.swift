@@ -143,13 +143,12 @@ public final class HiVideoPlayer: Player, ObservableObject {
                         let vTracks = item.asset.tracks(withMediaType: .video)
                         print("[Player] ✓ ready  dur=\(String(format:"%.1f",item.duration.seconds))s  videoTracks=\(vTracks.count)")
                         for (i, t) in vTracks.enumerated() {
-                            if let desc = t.formatDescriptions.first as? CMFormatDescription {
-                                let fcc = CMFormatDescriptionGetMediaSubType(desc)
-                                let s = String(bytes: [UInt8((fcc>>24)&0xFF),UInt8((fcc>>16)&0xFF),
-                                                        UInt8((fcc>>8)&0xFF),UInt8(fcc&0xFF)],
-                                               encoding: .ascii) ?? "????"
-                                print("[Player] videoTrack[\(i)] codec=\(s.trimmingCharacters(in:.whitespaces)) size=\(t.naturalSize) fps=\(String(format:"%.2f",t.nominalFrameRate))")
-                            }
+                            let desc = t.formatDescriptions.first as! CMFormatDescription
+                            let fcc = CMFormatDescriptionGetMediaSubType(desc)
+                            let s = String(bytes: [UInt8((fcc>>24)&0xFF),UInt8((fcc>>16)&0xFF),
+                                                    UInt8((fcc>>8)&0xFF),UInt8(fcc&0xFF)],
+                                           encoding: .ascii) ?? "????"
+                            print("[Player] videoTrack[\(i)] codec=\(s.trimmingCharacters(in:.whitespaces)) size=\(t.naturalSize) fps=\(String(format:"%.2f",t.nominalFrameRate))")
                         }
                         // 1 秒后检查播放状态
                         Task {
