@@ -85,7 +85,7 @@ public final class HiVideoPlayer: Player, ObservableObject {
         "mkv", "avi", "ts", "m2ts", "mts", "rmvb", "rm", "wmv", "flv", "webm",
     ]
 
-    public func load(_ url: URL) async throws {
+    public func load(_ url: URL) async {
         status = .loading
         currentURL = url
 

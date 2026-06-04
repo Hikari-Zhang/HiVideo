@@ -53,7 +53,7 @@ public protocol Player: AnyObject {
     var timePublisher: AnyPublisher<CMTime, Never> { get }
 
     // 生命周期
-    func load(_ url: URL) async throws
+    func load(_ url: URL) async
     func play()
     func pause()
     func stop()

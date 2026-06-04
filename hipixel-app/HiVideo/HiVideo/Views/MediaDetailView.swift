@@ -211,8 +211,22 @@ struct MediaDetailView: View {
     }
 
     private func loadThumbnail() async {
-        if let path = item.thumbnailPath {
-            thumbnail = NSImage(contentsOfFile: path)
+        // 1. 数据库路径
+        if let path = item.thumbnailPath, !path.isEmpty,
+           let img = NSImage(contentsOfFile: path) {
+            thumbnail = img; return
+        }
+        // 2. 缓存目录直接查找
+        let cacheURL = FileManager.default
+            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("HiVideo/Thumbnails/\(item.id).jpg")
+        if let img = NSImage(contentsOf: cacheURL) {
+            thumbnail = img; return
+        }
+        // 3. 触发生成
+        if let path = await ThumbnailGenerator.generate(for: item.url, itemID: item.id),
+           let img = NSImage(contentsOfFile: path) {
+            thumbnail = img
         }
     }
 }

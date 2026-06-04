@@ -15,6 +15,7 @@ struct MediaLibraryView: View {
     @EnvironmentObject var library: MediaLibrary
     @EnvironmentObject var player: HiVideoPlayer
     @EnvironmentObject var playerState: PlayerStateObject
+    @Environment(\.openWindow) private var openWindow
     @State private var isDragging = false
 
     // 网格列数：自适应 160pt 宽
@@ -115,20 +116,11 @@ struct MediaLibraryView: View {
 
     private func play(item: MediaItem) {
         selectedItem = item
-        Task {
-            // 先加载
-            try? await player.load(item.url)
-            // 再播放
+        Task { @MainActor in
+            await player.load(item.url)
             player.play()
-            // 打开播放器窗口
-            await MainActor.run {
-                showPlayer = true
-                if let playerWindow = NSApp.windows.first(where: { $0.identifier?.rawValue == "player" }) {
-                    playerWindow.makeKeyAndOrderFront(nil)
-                } else {
-                    NSApp.sendAction(Selector(("showPlayerWindow:")), to: nil, from: nil)
-                }
-            }
+            playerState.bind(to: player)
+            openWindow(id: "player")
         }
     }
 
@@ -246,13 +238,23 @@ struct PosterGridCell: View {
     }
 
     private func loadThumbnail() async {
-        if let path = item.thumbnailPath, let img = NSImage(contentsOfFile: path) {
+        // 1. 数据库已有路径，直接加载
+        if let path = item.thumbnailPath, !path.isEmpty,
+           let img = NSImage(contentsOfFile: path) {
             thumbnail = img
             return
         }
-        // 无缩略图则后台生成
-        let path = await ThumbnailGenerator.generate(for: item.url, itemID: item.id)
-        if let path, let img = NSImage(contentsOfFile: path) {
+        // 2. 检查缩略图目录是否已有文件（有时数据库路径没及时写回）
+        let cacheDir = FileManager.default
+            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("HiVideo/Thumbnails/\(item.id).jpg")
+        if let img = NSImage(contentsOf: cacheDir) {
+            thumbnail = img
+            return
+        }
+        // 3. 触发生成（ffmpeg）
+        if let path = await ThumbnailGenerator.generate(for: item.url, itemID: item.id),
+           let img = NSImage(contentsOfFile: path) {
             thumbnail = img
         }
     }
@@ -262,13 +264,25 @@ struct PosterGridCell: View {
 
 struct PosterListRow: View {
     let item: MediaItem
+    @State private var thumbnail: NSImage?
 
     var body: some View {
         HStack(spacing: 12) {
-            RoundedRectangle(cornerRadius: 6)
-                .fill(Color.secondary.opacity(0.15))
-                .frame(width: 48, height: 72)
-                .overlay(Image(systemName: "film").foregroundColor(.secondary))
+            ZStack {
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color.secondary.opacity(0.15))
+                    .frame(width: 48, height: 72)
+                if let thumb = thumbnail {
+                    Image(nsImage: thumb)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 48, height: 72)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                } else {
+                    Image(systemName: "film")
+                        .foregroundColor(.secondary)
+                }
+            }
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.title).font(.system(size: 14, weight: .medium)).lineLimit(1)
@@ -280,6 +294,18 @@ struct PosterListRow: View {
                 .font(.system(size: 12)).foregroundColor(.secondary)
         }
         .padding(.vertical, 4)
+        .task(id: item.id) {
+            let cacheURL = FileManager.default
+                .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+                .appendingPathComponent("HiVideo/Thumbnails/\(item.id).jpg")
+            if let img = NSImage(contentsOf: cacheURL) {
+                thumbnail = img; return
+            }
+            if let path = await ThumbnailGenerator.generate(for: item.url, itemID: item.id),
+               let img = NSImage(contentsOfFile: path) {
+                thumbnail = img
+            }
+        }
     }
 
     private var fileSizeLabel: String {
