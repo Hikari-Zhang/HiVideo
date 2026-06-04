@@ -92,44 +92,36 @@ struct PlayerWindowView: View {
 struct AVPlayerLayerView: NSViewRepresentable {
     let player: AVPlayer
 
-    func makeNSView(context: Context) -> NSView {
-        let view = PlayerNSView()
-        view.playerLayer.player = player
-        view.playerLayer.videoGravity = .resizeAspect
-        view.playerLayer.backgroundColor = CGColor.black
-        view.wantsLayer = true
+    func makeNSView(context: Context) -> PlayerNSView {
+        let view = PlayerNSView(player: player)
         return view
     }
 
-    func updateNSView(_ nsView: NSView, context: Context) {
-        if let v = nsView as? PlayerNSView {
-            v.playerLayer.frame = nsView.bounds
-        }
+    func updateNSView(_ nsView: PlayerNSView, context: Context) {
+        // AVPlayer 引用不变，无需更新
     }
 
-    // NSView subclass that exposes its backing layer as AVPlayerLayer
+    // NSView whose backing layer IS the AVPlayerLayer directly
     final class PlayerNSView: NSView {
-        override init(frame: NSRect) {
-            super.init(frame: frame)
+        private let avPlayerLayer: AVPlayerLayer
+
+        init(player: AVPlayer) {
+            self.avPlayerLayer = AVPlayerLayer(player: player)
+            self.avPlayerLayer.videoGravity = .resizeAspect
+            self.avPlayerLayer.backgroundColor = CGColor.black
+            super.init(frame: .zero)
             wantsLayer = true
         }
-        required init?(coder: NSCoder) { super.init(coder: coder) }
+        required init?(coder: NSCoder) { fatalError() }
 
-        var playerLayer: AVPlayerLayer {
-            // Create once on first access
-            if let existing = layer?.sublayers?.first(where: { $0 is AVPlayerLayer }) as? AVPlayerLayer {
-                return existing
-            }
-            let pl = AVPlayerLayer()
-            pl.videoGravity = .resizeAspect
-            pl.backgroundColor = CGColor.black
-            layer?.addSublayer(pl)
-            return pl
+        // Override makeBackingLayer so the view's own layer IS the AVPlayerLayer
+        override func makeBackingLayer() -> CALayer {
+            return avPlayerLayer
         }
 
         override func layout() {
             super.layout()
-            playerLayer.frame = bounds
+            avPlayerLayer.frame = bounds
         }
     }
 }

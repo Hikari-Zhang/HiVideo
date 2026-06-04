@@ -20,10 +20,6 @@ let package = Package(
             swiftSettings: [
                 .enableUpcomingFeature("BareSlashRegexLiterals"),
                 .enableExperimentalFeature("StrictConcurrency"),
-            ],
-            linkerSettings: [
-                .linkedFramework("QuickLookThumbnailing"),
-                .linkedFramework("AppKit"),
             ]
         ),
         .testTarget(
