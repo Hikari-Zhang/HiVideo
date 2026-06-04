@@ -2,6 +2,7 @@
 // 媒体库内容区：网格视图 + 列表视图
 
 import SwiftUI
+import UniformTypeIdentifiers
 import MediaKit
 
 struct MediaLibraryView: View {

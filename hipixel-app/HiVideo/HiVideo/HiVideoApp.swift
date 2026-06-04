@@ -2,6 +2,7 @@
 // 应用入口，窗口配置，菜单命令
 
 import SwiftUI
+import UniformTypeIdentifiers
 import PlaybackKit
 import MediaKit
 

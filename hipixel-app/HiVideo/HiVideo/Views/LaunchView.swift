@@ -3,6 +3,7 @@
 // 参考设计稿：docs/design/mockups/01-launch.html
 
 import SwiftUI
+import UniformTypeIdentifiers
 import MediaKit
 
 struct LaunchView: View {

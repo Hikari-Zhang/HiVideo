@@ -6,6 +6,13 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		2F40C30A2FD1A26800210410 /* PlaybackKit in Frameworks */ = {isa = PBXBuildFile; productRef = 2F40C3092FD1A26800210410 /* PlaybackKit */; };
+		2F40C30D2FD1A2B200210410 /* MediaKit in Frameworks */ = {isa = PBXBuildFile; productRef = 2F40C30C2FD1A2B200210410 /* MediaKit */; };
+		2F40C3102FD1A37700210410 /* AIKit in Frameworks */ = {isa = PBXBuildFile; productRef = 2F40C30F2FD1A37700210410 /* AIKit */; };
+		2F40C3132FD1A38900210410 /* PluginKit in Frameworks */ = {isa = PBXBuildFile; productRef = 2F40C3122FD1A38900210410 /* PluginKit */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		2F40C2E72FD19EDA00210410 /* HiVideo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HiVideo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -23,6 +30,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2F40C3132FD1A38900210410 /* PluginKit in Frameworks */,
+				2F40C3102FD1A37700210410 /* AIKit in Frameworks */,
+				2F40C30D2FD1A2B200210410 /* MediaKit in Frameworks */,
+				2F40C30A2FD1A26800210410 /* PlaybackKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -65,6 +76,10 @@
 			);
 			name = HiVideo;
 			packageProductDependencies = (
+				2F40C3092FD1A26800210410 /* PlaybackKit */,
+				2F40C30C2FD1A2B200210410 /* MediaKit */,
+				2F40C30F2FD1A37700210410 /* AIKit */,
+				2F40C3122FD1A38900210410 /* PluginKit */,
 			);
 			productName = HiVideo;
 			productReference = 2F40C2E72FD19EDA00210410 /* HiVideo.app */;
@@ -94,6 +109,12 @@
 			);
 			mainGroup = 2F40C2DE2FD19EDA00210410;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				2F40C3082FD1A26800210410 /* XCLocalSwiftPackageReference "Packages/PlaybackKit" */,
+				2F40C30B2FD1A2B200210410 /* XCLocalSwiftPackageReference "Packages/MediaKit" */,
+				2F40C30E2FD1A37700210410 /* XCLocalSwiftPackageReference "Packages/AIKit" */,
+				2F40C3112FD1A38900210410 /* XCLocalSwiftPackageReference "Packages/PluginKit" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 2F40C2E82FD19EDA00210410 /* Products */;
 			projectDirPath = "";
@@ -331,6 +352,44 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		2F40C3082FD1A26800210410 /* XCLocalSwiftPackageReference "Packages/PlaybackKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/PlaybackKit;
+		};
+		2F40C30B2FD1A2B200210410 /* XCLocalSwiftPackageReference "Packages/MediaKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/MediaKit;
+		};
+		2F40C30E2FD1A37700210410 /* XCLocalSwiftPackageReference "Packages/AIKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/AIKit;
+		};
+		2F40C3112FD1A38900210410 /* XCLocalSwiftPackageReference "Packages/PluginKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/PluginKit;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		2F40C3092FD1A26800210410 /* PlaybackKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PlaybackKit;
+		};
+		2F40C30C2FD1A2B200210410 /* MediaKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = MediaKit;
+		};
+		2F40C30F2FD1A37700210410 /* AIKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AIKit;
+		};
+		2F40C3122FD1A38900210410 /* PluginKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PluginKit;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 2F40C2DF2FD19EDA00210410 /* Project object */;
 }

@@ -182,10 +182,15 @@ public final class HiVideoPlayer: Player, ObservableObject {
 
     private func startDisplayLink() {
         displayLink = DisplayLink(fps: 60) { [weak self] in
-            self?.renderNextFrame()
+            self?.renderNextFrameFromDisplayLink()
         }
         displayLink?.rate = Double(rate)
         displayLink?.start()
+    }
+
+    /// CVDisplayLink 回调线程上调用（非 MainActor）
+    private nonisolated func renderNextFrameFromDisplayLink() {
+        Task { await renderNextFrame() }
     }
 
     private func renderNextFrame() {

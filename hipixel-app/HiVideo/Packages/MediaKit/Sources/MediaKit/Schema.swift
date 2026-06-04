@@ -7,7 +7,7 @@ import GRDB
 // MARK: - MediaItem
 
 /// 媒体库中的视频条目
-public struct MediaItem: Identifiable, Codable, FetchableRecord, PersistableRecord, Sendable {
+public struct MediaItem: Identifiable, Hashable, Codable, FetchableRecord, PersistableRecord, Sendable {
     public var id: String                  // UUID 字符串
     public var fileURL: String             // 文件绝对路径
     public var title: String               // 显示标题（文件名去扩展名）

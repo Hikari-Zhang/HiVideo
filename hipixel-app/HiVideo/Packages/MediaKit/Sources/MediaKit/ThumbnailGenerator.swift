@@ -33,7 +33,7 @@ public enum ThumbnailGenerator {
             return destURL.path
         }
 
-        return await withCheckedContinuation { continuation in
+        return await withCheckedContinuation { (continuation: CheckedContinuation<String?, Never>) in
             Task.detached(priority: .background) {
                 let asset = AVURLAsset(url: url)
                 let generator = AVAssetImageGenerator(asset: asset)
@@ -54,11 +54,9 @@ public enum ThumbnailGenerator {
                     preferredTimescale: 600
                 )
 
-                generator.generateCGImageAsynchronously(forTime: targetTime) { cgImage, _, error in
-                    guard let cgImage, error == nil else {
-                        continuation.resume(returning: nil)
-                        return
-                    }
+                // 使用 async/await 版本（macOS 13+）
+                do {
+                    let (cgImage, _) = try await generator.image(at: targetTime)
 
                     let nsImage = NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
                     guard let tiffData = nsImage.tiffRepresentation,
@@ -75,6 +73,8 @@ public enum ThumbnailGenerator {
                         print("[ThumbnailGenerator] Write failed: \(error)")
                         continuation.resume(returning: nil)
                     }
+                } catch {
+                    continuation.resume(returning: nil)
                 }
             }
         }
