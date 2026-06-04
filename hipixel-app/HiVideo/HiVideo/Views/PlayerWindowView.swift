@@ -111,18 +111,22 @@ struct AVPlayerLayerView: NSViewRepresentable {
         }
     }
 
-    /// NSView 子类，override layout() 确保 AVPlayerLayer 随视图尺寸变化
     final class PlayerHostView: NSView {
-        private let playerLayer: AVPlayerLayer
+        let playerLayer: AVPlayerLayer
 
         init(playerLayer: AVPlayerLayer) {
-            self.playerLayer = playerLayer
+            self.playerLayer = playerLayer   // stored BEFORE super.init
             super.init(frame: .zero)
-            // layer 必须在 wantsLayer 之前赋值
-            layer      = playerLayer
-            wantsLayer = true
+            wantsLayer = true                // triggers makeBackingLayer() below
         }
         required init?(coder: NSCoder) { fatalError() }
+
+        // AppKit calls this exactly once when wantsLayer becomes true.
+        // Returning playerLayer makes it the view's own backing layer.
+        override func makeBackingLayer() -> CALayer {
+            print("[PlayerHostView] makeBackingLayer → player=\(String(describing:playerLayer.player))")
+            return playerLayer
+        }
 
         override func layout() {
             super.layout()
@@ -130,34 +134,12 @@ struct AVPlayerLayerView: NSViewRepresentable {
             CATransaction.setDisableActions(true)
             playerLayer.frame = bounds
             CATransaction.commit()
-
-            // 诊断：检查 layer 是否在 window 中，以及 superlayer 链
-            let inWindow = window != nil
-            let superL   = playerLayer.superlayer?.description ?? "nil"
-            print("[PlayerHostView] layout() bounds=\(bounds) readyForDisplay=\(playerLayer.isReadyForDisplay) inWindow=\(inWindow) superlayer=\(superL)")
-
-            // 每次 layout 后轮询 readyForDisplay，最多等 5 秒
-            if !playerLayer.isReadyForDisplay {
-                pollReadyForDisplay()
-            }
+            print("[PlayerHostView] layout bounds=\(bounds) superlayer=\(playerLayer.superlayer == nil ? "nil" : "ok") ready=\(playerLayer.isReadyForDisplay)")
         }
 
-        private func pollReadyForDisplay(count: Int = 0) {
-            guard count < 20 else {
-                print("[PlayerHostView] ❌ readyForDisplay never became true after 5s")
-                return
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
-                guard let self else { return }
-                if self.playerLayer.isReadyForDisplay {
-                    print("[PlayerHostView] ✓ readyForDisplay=true at \(Double(count)*0.25)s  bounds=\(self.bounds)")
-                } else if count % 4 == 0 {
-                    print("[PlayerHostView] waiting... \(Double(count)*0.25)s  readyForDisplay=false")
-                    self.pollReadyForDisplay(count: count + 1)
-                } else {
-                    self.pollReadyForDisplay(count: count + 1)
-                }
-            }
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            print("[PlayerHostView] didMoveToWindow  window=\(window == nil ? "nil" : "ok")  layer===playerLayer:\(layer === playerLayer)")
         }
     }
 }
