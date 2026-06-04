@@ -97,16 +97,25 @@ struct AVPlayerLayerView: NSViewRepresentable {
     }
 
     func makeNSView(context: Context) -> NSView {
-        let view = NSView()
-        // 先设 layer，再设 wantsLayer=true
-        // NSView 会把 layer 作为自己的 backing layer（而非 sublayer）
-        view.layer = context.coordinator.playerLayer
+        let coord = context.coordinator
+        let view  = NSView()
+
+        // 必须在 wantsLayer 之前赋值
+        view.layer      = coord.playerLayer
         view.wantsLayer = true
+
+        print("[LayerView] makeNSView  playerLayer=\(coord.playerLayer)  player=\(String(describing: coord.playerLayer.player))  view.layer===playerLayer: \(view.layer === coord.playerLayer)")
         return view
     }
 
     func updateNSView(_ nsView: NSView, context: Context) {
-        // player 引用不变，layer 已绑定，无需操作
+        let coord = context.coordinator
+        print("[LayerView] updateNSView  bounds=\(nsView.bounds)  view.layer===playerLayer: \(nsView.layer === coord.playerLayer)  player=\(String(describing: coord.playerLayer.player))  readyForDisplay=\(coord.playerLayer.isReadyForDisplay)")
+        // 如果 layer 被替换，重新绑定
+        if nsView.layer !== coord.playerLayer {
+            print("[LayerView] ⚠️ layer was replaced! Re-assigning...")
+            nsView.layer = coord.playerLayer
+        }
     }
 
     final class Coordinator: NSObject {
@@ -115,6 +124,7 @@ struct AVPlayerLayerView: NSViewRepresentable {
             playerLayer = AVPlayerLayer(player: player)
             playerLayer.videoGravity = .resizeAspect
             playerLayer.backgroundColor = CGColor.black
+            print("[Coordinator] init  playerLayer=\(playerLayer)  player=\(player)")
         }
     }
 }

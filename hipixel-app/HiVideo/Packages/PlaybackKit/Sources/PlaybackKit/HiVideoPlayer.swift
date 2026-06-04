@@ -161,12 +161,18 @@ public final class HiVideoPlayer: Player, ObservableObject {
     // MARK: - Playback Control
 
     public func play() {
+        print("[Player] play() status=\(status)  itemStatus=\(String(describing: avPlayer.currentItem?.status.rawValue))  rate=\(avPlayer.rate)")
         guard status == .ready || status == .paused else {
             print("[Player] play() ignored – status=\(status)")
             return
         }
         avPlayer.play()
         status = .playing
+        // 稍后打印确认 rate 已改变
+        Task {
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            print("[Player] 300ms after play() — rate=\(self.avPlayer.rate)  timeControl=\(self.avPlayer.timeControlStatus.rawValue)  currentTime=\(self.avPlayer.currentTime().seconds)")
+        }
     }
 
     public func pause() {
