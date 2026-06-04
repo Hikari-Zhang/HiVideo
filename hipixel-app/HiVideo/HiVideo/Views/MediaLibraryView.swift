@@ -4,6 +4,7 @@
 import SwiftUI
 import UniformTypeIdentifiers
 import MediaKit
+import PlaybackKit
 
 struct MediaLibraryView: View {
     let items: [MediaItem]
@@ -12,6 +13,8 @@ struct MediaLibraryView: View {
     @Binding var showPlayer: Bool
 
     @EnvironmentObject var library: MediaLibrary
+    @EnvironmentObject var player: HiVideoPlayer
+    @EnvironmentObject var playerState: PlayerStateObject
     @State private var isDragging = false
 
     // 网格列数：自适应 160pt 宽
@@ -112,9 +115,21 @@ struct MediaLibraryView: View {
 
     private func play(item: MediaItem) {
         selectedItem = item
-        // 打开播放器窗口
-        NSApp.sendAction(#selector(AppDelegate.openPlayerWindow(_:)), to: nil, from: item.url as NSURL)
-        showPlayer = true
+        Task {
+            // 先加载
+            try? await player.load(item.url)
+            // 再播放
+            player.play()
+            // 打开播放器窗口
+            await MainActor.run {
+                showPlayer = true
+                if let playerWindow = NSApp.windows.first(where: { $0.identifier?.rawValue == "player" }) {
+                    playerWindow.makeKeyAndOrderFront(nil)
+                } else {
+                    NSApp.sendAction(Selector(("showPlayerWindow:")), to: nil, from: nil)
+                }
+            }
+        }
     }
 
     private func handleDrop(providers: [NSItemProvider]) -> Bool {
@@ -156,8 +171,8 @@ struct PosterGridCell: View {
             metadata
         }
         .onHover { isHovered = $0 }
+        .onTapGesture(count: 2) { onPlay() }   // 双击必须在单击之前声明
         .onTapGesture { onTap() }
-        .onTapGesture(count: 2) { onPlay() }
         .animation(.spring(response: 0.28, dampingFraction: 0.85), value: isHovered)
         .task(id: item.id) { await loadThumbnail() }
     }

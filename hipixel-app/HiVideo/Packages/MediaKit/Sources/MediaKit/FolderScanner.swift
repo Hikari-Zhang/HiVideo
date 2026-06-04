@@ -71,31 +71,54 @@ public final class FolderScanner: Sendable {
     // MARK: - Private
 
     private func processBatch(_ files: [URL]) async {
-        var items: [MediaItem] = []
+        // 1. 先批量插入占位记录（title-only，元数据为空），UI 立即响应
+        var placeholders: [MediaItem] = []
         for fileURL in files {
-            let meta = await MetadataExtractor.extract(from: fileURL)
-            let item = MediaItem(
+            let fileSize = (try? FileManager.default.attributesOfItem(atPath: fileURL.path)[.size] as? Int64) ?? 0
+            placeholders.append(MediaItem(
                 fileURL: fileURL.path,
                 title: fileURL.deletingPathExtension().lastPathComponent,
-                duration: meta.duration,
-                width: meta.width,
-                height: meta.height,
-                codec: meta.codec,
-                fileSize: meta.fileSize,
+                fileSize: fileSize,
                 addedAt: Date().timeIntervalSince1970
-            )
-            items.append(item)
+            ))
         }
-
         do {
             try await db.write { db in
-                for item in items {
-                    // INSERT OR IGNORE：重复路径静默跳过
+                for item in placeholders {
                     try item.insertAndFetch(db, onConflict: .ignore)
                 }
             }
         } catch {
             print("[FolderScanner] Batch insert error: \(error)")
+        }
+
+        // 2. 后台逐一提取元数据并更新（不阻塞扫描进度）
+        for (idx, fileURL) in files.enumerated() {
+            let itemID = placeholders[idx].id
+            Task.detached(priority: .background) { [db] in
+                let meta = await MetadataExtractor.extract(from: fileURL)
+                do {
+                    try await db.write { db in
+                        try db.execute(sql: """
+                            UPDATE media_items
+                            SET duration=?, width=?, height=?, codec=?, file_size=?
+                            WHERE id=?
+                            """,
+                            arguments: [meta.duration, meta.width, meta.height,
+                                        meta.codec, meta.fileSize, itemID]
+                        )
+                    }
+                    // 缩略图
+                    if let path = await ThumbnailGenerator.generate(for: fileURL, itemID: itemID) {
+                        try await db.write { db in
+                            try db.execute(sql: "UPDATE media_items SET thumbnail_path=? WHERE id=?",
+                                           arguments: [path, itemID])
+                        }
+                    }
+                } catch {
+                    print("[FolderScanner] Metadata update error: \(error)")
+                }
+            }
         }
     }
 

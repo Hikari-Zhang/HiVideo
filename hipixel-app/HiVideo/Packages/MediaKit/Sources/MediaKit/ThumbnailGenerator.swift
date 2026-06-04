@@ -33,50 +33,44 @@ public enum ThumbnailGenerator {
             return destURL.path
         }
 
-        return await withCheckedContinuation { (continuation: CheckedContinuation<String?, Never>) in
-            Task.detached(priority: .background) {
-                let asset = AVURLAsset(url: url)
-                let generator = AVAssetImageGenerator(asset: asset)
-                generator.appliesPreferredTrackTransform = true
-                generator.maximumSize = CGSize(width: 320, height: 480)
+        let asset = AVURLAsset(url: url)
+        let generator = AVAssetImageGenerator(asset: asset)
+        generator.appliesPreferredTrackTransform = true
+        generator.maximumSize = CGSize(width: 320, height: 480)
+        // 允许使用最近帧，提高 MKV 兼容性
+        generator.requestedTimeToleranceBefore = CMTime(seconds: 3, preferredTimescale: 600)
+        generator.requestedTimeToleranceAfter  = CMTime(seconds: 3, preferredTimescale: 600)
 
-                // 目标时间：duration × fraction
-                let duration: CMTime
-                do {
-                    duration = try await asset.load(.duration)
-                } catch {
-                    continuation.resume(returning: nil)
-                    return
-                }
+        // 先加载时长
+        let duration: Double
+        do {
+            let cmDur = try await asset.load(.duration)
+            duration = cmDur.seconds.isFinite && cmDur.seconds > 0 ? cmDur.seconds : 30
+        } catch {
+            // 无法读取时长时截第 5 秒
+            duration = 30
+        }
 
-                let targetTime = CMTime(
-                    seconds: duration.seconds * max(0.05, min(fraction, 0.9)),
-                    preferredTimescale: 600
-                )
+        let targetTime = CMTime(
+            seconds: duration * max(0.05, min(fraction, 0.9)),
+            preferredTimescale: 600
+        )
 
-                // 使用 async/await 版本（macOS 13+）
-                do {
-                    let (cgImage, _) = try await generator.image(at: targetTime)
+        do {
+            let (cgImage, _) = try await generator.image(at: targetTime)
+            let nsImage = NSImage(cgImage: cgImage,
+                                  size: NSSize(width: cgImage.width, height: cgImage.height))
+            guard let tiffData  = nsImage.tiffRepresentation,
+                  let bitmap    = NSBitmapImageRep(data: tiffData),
+                  let jpegData  = bitmap.representation(using: .jpeg,
+                                                        properties: [.compressionFactor: 0.85])
+            else { return nil }
 
-                    let nsImage = NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
-                    guard let tiffData = nsImage.tiffRepresentation,
-                          let bitmap = NSBitmapImageRep(data: tiffData),
-                          let jpegData = bitmap.representation(using: .jpeg, properties: [.compressionFactor: 0.85]) else {
-                        continuation.resume(returning: nil)
-                        return
-                    }
-
-                    do {
-                        try jpegData.write(to: destURL)
-                        continuation.resume(returning: destURL.path)
-                    } catch {
-                        print("[ThumbnailGenerator] Write failed: \(error)")
-                        continuation.resume(returning: nil)
-                    }
-                } catch {
-                    continuation.resume(returning: nil)
-                }
-            }
+            try jpegData.write(to: destURL)
+            return destURL.path
+        } catch {
+            print("[ThumbnailGenerator] Failed for \(url.lastPathComponent): \(error)")
+            return nil
         }
     }
 

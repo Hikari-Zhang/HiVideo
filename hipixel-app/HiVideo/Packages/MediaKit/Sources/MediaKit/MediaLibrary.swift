@@ -79,19 +79,49 @@ public final class MediaLibrary: ObservableObject {
             title: fileURL.deletingPathExtension().lastPathComponent,
             addedAt: Date().timeIntervalSince1970
         )
-        // 提取元数据（异步）
-        let meta = await MetadataExtractor.extract(from: fileURL)
-        item.duration = meta.duration
-        item.width = meta.width
-        item.height = meta.height
-        item.codec = meta.codec
-        item.fileSize = meta.fileSize
 
+        // 先插入占位记录让 UI 立即显示
         try await db.write { db in
-            try item.insert(db)
+            // INSERT OR IGNORE：避免重复
+            if try MediaItem.filter(Column("file_url") == fileURL.path).fetchOne(db) == nil {
+                try item.insert(db)
+            }
         }
         await reload()
+
+        // 后台提取元数据，完成后更新记录
+        Task.detached(priority: .utility) { [weak self] in
+            guard let self else { return }
+            let meta = await MetadataExtractor.extract(from: fileURL)
+            await self.updateMetadata(for: item.id, meta: meta, url: fileURL)
+        }
+
         return item
+    }
+
+    /// 更新已有条目的元数据（提取完成后回调）
+    public func updateMetadata(for id: String, meta: VideoMetadata, url: URL) async {
+        do {
+            try await db.write { db in
+                try db.execute(sql: """
+                    UPDATE media_items
+                    SET duration=?, width=?, height=?, codec=?, file_size=?
+                    WHERE id=?
+                    """,
+                    arguments: [meta.duration, meta.width, meta.height, meta.codec, meta.fileSize, id]
+                )
+            }
+            // 缩略图也在此时生成
+            let thumbPath = await ThumbnailGenerator.generate(for: url, itemID: id)
+            if let path = thumbPath {
+                try await db.write { db in
+                    try db.execute(sql: "UPDATE media_items SET thumbnail_path=? WHERE id=?",
+                                   arguments: [path, id])
+                }
+            }
+        } catch {
+            print("[MediaLibrary] updateMetadata error: \(error)")
+        }
     }
 
     /// 添加监视文件夹并立即扫描
