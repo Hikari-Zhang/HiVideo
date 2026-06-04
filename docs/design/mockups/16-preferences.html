@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>HiVideo · 偏好设置</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  /* macOS 风格偏好设置窗口 */
+  .prefs-window {
+    height: calc(100vh - 40px);
+    display: flex; flex-direction: column;
+    background: var(--surface-background);
+  }
+  /* 工具栏 */
+  .prefs-toolbar {
+    height: var(--toolbar-height);
+    display: flex; align-items: center; justify-content: center;
+    padding: 0 var(--sp-xl);
+    border-bottom: 0.5px solid var(--border-default);
+    background: rgba(28,28,30,0.8); backdrop-filter: blur(20px);
+    position: relative; flex-shrink: 0;
+  }
+  .prefs-search {
+    display: flex; align-items: center; gap: var(--sp-xs);
+    background: var(--surface-secondary);
+    border: 0.5px solid var(--border-default);
+    border-radius: var(--r-md); padding: 6px var(--sp-sm);
+    width: 240px;
+  }
+  .prefs-search input {
+    background: transparent; border: none; color: var(--text-primary);
+    font-size: 14px; outline: none; width: 100%;
+  }
+  .prefs-search input::placeholder { color: var(--text-tertiary); }
+  /* 主体 */
+  .prefs-body { display: flex; flex: 1; overflow: hidden; }
+  /* 左侧导航 */
+  .prefs-nav {
+    width: 200px; flex-shrink: 0;
+    border-right: 0.5px solid var(--border-default);
+    background: rgba(28,28,30,0.5);
+    padding: var(--sp-sm) 0; overflow-y: auto;
+  }
+  .nav-section { margin-bottom: var(--sp-xs); }
+  .nav-section-title {
+    padding: 4px var(--sp-md);
+    font-size: 11px; font-weight: 600; letter-spacing: 0.05em;
+    text-transform: uppercase; color: var(--text-tertiary);
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: var(--sp-sm);
+    padding: 6px var(--sp-md); cursor: pointer;
+    border-radius: var(--r-sm); margin: 0 var(--sp-xs);
+    transition: background 0.1s; font-size: 14px; color: var(--text-secondary);
+  }
+  .nav-item:hover  { background: var(--state-hover); color: var(--text-primary); }
+  .nav-item.active { background: var(--state-selected); color: var(--accent); font-weight: 500; }
+  .nav-icon { width: 22px; height: 22px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+  /* 内容区 */
+  .prefs-content { flex: 1; overflow-y: auto; }
+  /* 每个设置页面 */
+  .pref-page { display: none; padding: var(--sp-xxl) var(--sp-xxxl); max-width: 680px; }
+  .pref-page.active { display: block; }
+  .pref-title { font-size: 22px; font-weight: 400; margin-bottom: var(--sp-xl); }
+  /* 设置块 */
+  .pref-section {
+    background: var(--surface-primary);
+    border: 0.5px solid var(--border-default);
+    border-radius: var(--r-lg); overflow: hidden;
+    margin-bottom: var(--sp-md);
+  }
+  .pref-section-title {
+    padding: var(--sp-sm) var(--sp-md);
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--text-tertiary);
+    background: var(--surface-secondary);
+    border-bottom: 0.5px solid var(--border-default);
+  }
+  /* 设置行 */
+  .pref-row {
+    display: flex; align-items: center;
+    padding: var(--sp-sm) var(--sp-md);
+    border-bottom: 0.5px solid var(--border-default);
+    min-height: 44px; gap: var(--sp-md);
+  }
+  .pref-row:last-child { border-bottom: none; }
+  .pref-row-label { flex: 1; }
+  .pref-label { font-size: 14px; color: var(--text-primary); }
+  .pref-desc  { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+  .pref-control { flex-shrink: 0; display: flex; align-items: center; gap: var(--sp-xs); }
+  /* 选择器 */
+  .pref-select {
+    background: var(--surface-secondary);
+    border: 0.5px solid var(--border-default);
+    border-radius: var(--r-sm); color: var(--text-primary);
+    font-size: 13px; padding: 5px var(--sp-xs); outline: none; cursor: pointer;
+  }
+  /* 快捷键行 */
+  .kbd-row {
+    display: flex; align-items: center;
+    padding: var(--sp-xs) var(--sp-md);
+    border-bottom: 0.5px solid var(--border-default);
+    gap: var(--sp-md);
+  }
+  .kbd-row:last-child { border-bottom: none; }
+  .kbd-action { font-size: 14px; flex: 1; }
+  .kbd-tag {
+    background: var(--surface-secondary);
+    border: 0.5px solid var(--border-default);
+    border-radius: var(--r-sm); padding: 3px 8px;
+    font-size: 12px; color: var(--text-secondary); cursor: pointer;
+    transition: background 0.1s;
+  }
+  .kbd-tag:hover { background: var(--state-hover); }
+  .kbd-category {
+    padding: var(--sp-xs) var(--sp-md);
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--text-tertiary);
+    background: var(--surface-secondary);
+    border-bottom: 0.5px solid var(--border-default);
+  }
+  /* 关于页 */
+  .about-hero { text-align: center; padding: var(--sp-xl) 0 var(--sp-xxl); }
+  .about-icon {
+    width: 80px; height: 80px; border-radius: 18px;
+    background: linear-gradient(145deg, #0A84FF, #BF5AF2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 40px; margin: 0 auto var(--sp-md);
+    box-shadow: var(--shadow-md);
+  }
+  .about-version { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+</style>
+</head>
+<body>
+<nav class="mockup-nav">
+  <a class="nav-home" href="index.html">Mockups</a>
+  <span class="separator">/</span>
+  <span class="current">16 · 偏好设置</span>
+</nav>
+<div class="mockup-body">
+<div class="prefs-window">
+
+  <!-- 工具栏 -->
+  <div class="prefs-toolbar">
+    <div class="prefs-search">
+      <span style="color:var(--text-tertiary)">🔍</span>
+      <input type="text" placeholder="搜索设置…">
+    </div>
+  </div>
+
+  <div class="prefs-body">
+    <!-- 左侧导航 -->
+    <div class="prefs-nav">
+      <div class="nav-section">
+        <div class="nav-section-title">通用</div>
+        <div class="nav-item active" onclick="showPage('general',this)">
+          <div class="nav-icon" style="background:rgba(10,132,255,0.2)">⚙</div>通用
+        </div>
+        <div class="nav-item" onclick="showPage('appearance',this)">
+          <div class="nav-icon" style="background:rgba(191,90,242,0.2)">🎨</div>外观
+        </div>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-title">播放</div>
+        <div class="nav-item" onclick="showPage('playback',this)">
+          <div class="nav-icon" style="background:rgba(255,159,10,0.2)">▶</div>播放
+        </div>
+        <div class="nav-item" onclick="showPage('subtitles',this)">
+          <div class="nav-icon" style="background:rgba(100,210,255,0.2)">💬</div>字幕
+        </div>
+        <div class="nav-item" onclick="showPage('audio',this)">
+          <div class="nav-icon" style="background:rgba(48,209,88,0.2)">🔊</div>音频
+        </div>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-title">AI 功能</div>
+        <div class="nav-item" onclick="showPage('enhancement',this)">
+          <div class="nav-icon" style="background:rgba(255,214,0,0.2)">✨</div>画质增强
+        </div>
+        <div class="nav-item" onclick="showPage('ai',this)">
+          <div class="nav-icon" style="background:rgba(191,90,242,0.2)">🤖</div>AI 智能
+        </div>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-title">系统</div>
+        <div class="nav-item" onclick="showPage('shortcuts',this)">
+          <div class="nav-icon" style="background:rgba(255,69,58,0.2)">⌨</div>快捷键
+        </div>
+        <div class="nav-item" onclick="showPage('storage',this)">
+          <div class="nav-icon" style="background:rgba(255,159,10,0.2)">💾</div>存储
+        </div>
+        <div class="nav-item" onclick="showPage('nodes',this)">
+          <div class="nav-icon" style="background:rgba(10,132,255,0.2)">🖥</div>算力节点
+        </div>
+        <div class="nav-item" onclick="showPage('privacy',this)">
+          <div class="nav-icon" style="background:rgba(48,209,88,0.2)">🔒</div>隐私
+        </div>
+        <div class="nav-item" onclick="showPage('about',this)">
+          <div class="nav-icon" style="background:rgba(255,255,255,0.1)">ℹ</div>关于
+        </div>
+      </div>
+    </div>
+
+    <!-- 内容区 -->
+    <div class="prefs-content">
+
+      <!-- 通用 -->
+      <div class="pref-page active" id="page-general">
+        <div class="pref-title">通用</div>
+        <div class="pref-section">
+          <div class="pref-section-title">启动</div>
+          <div class="pref-row">
+            <div class="pref-row-label">
+              <div class="pref-label">启动时</div>
+            </div>
+            <div class="pref-control">
+              <select class="pref-select">
+                <option>显示启动屏</option>
+                <option selected>继续上次播放</option>
+                <option>打开媒体库</option>
+              </select>
+            </div>
+          </div>
+          <div class="pref-row">
+            <div class="pref-row-label">
+              <div class="pref-label">退出时</div>
+              <div class="pref-desc">关闭窗口时的行为</div>
+            </div>
+            <div class="pref-control">
+              <select class="pref-select">
+                <option selected>保存播放位置</option>
+                <option>询问</option>
+                <option>不保存</option>
+              </select>
+            </div>
+          </div>
+          <div class="pref-row">
+            <div class="pref-row-label"><div class="pref-label">开机自启</div></div>
+            <div class="pref-control">
+              <label class="toggle"><input type="checkbox"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+            </div>
+          </div>
+        </div>
+
+        <div class="pref-section">
+          <div class="pref-section-title">界面语言</div>
+          <div class="pref-row">
+            <div class="pref-row-label"><div class="pref-label">显示语言</div></div>
+            <div class="pref-control">
+              <select class="pref-select">
+                <option selected>跟随系统</option>
+                <option>简体中文</option>
+                <option>English</option>
+                <option>日本語</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="pref-section">
+          <div class="pref-section-title">更新</div>
+          <div class="pref-row">
+            <div class="pref-row-label">
+              <div class="pref-label">自动检查更新</div>
+            </div>
+            <div class="pref-control">
+              <label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+            </div>
+          </div>
+          <div class="pref-row">
+            <div class="pref-row-label"><div class="pref-label">当前版本：1.0.0</div></div>
+            <div class="pref-control"><button class="btn btn-secondary btn-sm">检查更新</button></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 外观 -->
+      <div class="pref-page" id="page-appearance">
+        <div class="pref-title">外观</div>
+        <div class="pref-section">
+          <div class="pref-section-title">主题</div>
+          <div class="pref-row">
+            <div class="pref-row-label"><div class="pref-label">外观模式</div></div>
+            <div class="pref-control">
+              <select class="pref-select">
+                <option selected>跟随系统</option>
+                <option>深色</option>
+                <option>浅色</option>
+              </select>
+            </div>
+          </div>
+          <div class="pref-row">
+            <div class="pref-row-label"><div class="pref-label">强调色</div></div>
+            <div class="pref-control" style="gap:6px">
+              <div style="width:20px;height:20px;border-radius:50%;background:#0A84FF;border:2px solid #fff;cursor:pointer"></div>
+              <div style="width:20px;height:20px;border-radius:50%;background:#BF5AF2;cursor:pointer"></div>
+              <div style="width:20px;height:20px;border-radius:50%;background:#30D158;cursor:pointer"></div>
+              <div style="width:20px;height:20px;border-radius:50%;background:#FF9F0A;cursor:pointer"></div>
+              <div style="width:20px;height:20px;border-radius:50%;background:#FF375F;cursor:pointer"></div>
+            </div>
+          </div>
+        </div>
+        <div class="pref-section">
+          <div class="pref-section-title">媒体库</div>
+          <div class="pref-row">
+            <div class="pref-row-label">
+              <div class="pref-label">默认视图</div>
+            </div>
+            <div class="pref-control">
+              <select class="pref-select">
+                <option selected>网格视图</option>
+                <option>列表视图</option>
+                <option>时间线视图</option>
+              </select>
+            </div>
+          </div>
+          <div class="pref-row">
+            <div class="pref-row-label">
+              <div class="pref-label">海报卡默认大小</div>
+            </div>
+            <div class="pref-control">
+              <select class="pref-select">
+                <option>小</option>
+                <option selected>中</option>
+                <option>大</option>
+                <option>超大</option>
+              </select>
+            </div>
+          </div>
+          <div class="pref-row">
+            <div class="pref-row-label">
+              <div class="pref-label">悬停预览</div>
+              <div class="pref-desc">鼠标悬停 3 秒后播放前 5 秒静音预览</div>
+            </div>
+            <div class="pref-control">
+              <label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 播放 -->
+      <div class="pref-page" id="page-playback">
+        <div class="pref-title">播放</div>
+        <div class="pref-section">
+          <div class="pref-section-title">基本行为</div>
+          <div class="pref-row">
+            <div class="pref-row-label"><div class="pref-label">自动续播</div></div>
+            <div class="pref-control">
+              <label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+            </div>
+          </div>
+          <div class="pref-row">
+            <div class="pref-row-label">
+              <div class="pref-label">默认播放速度</div>
+            </div>
+            <div class="pref-control">
+              <select class="pref-select">
+                <option>0.75×</option>
+                <option selected>1×</option>
+                <option>1.25×</option>
+                <option>1.5×</option>
+                <option>2×</option>
+              </select>
+            </div>
+          </div>
+          <div class="pref-row">
+            <div class="pref-row-label">
+              <div class="pref-label">智能跳过片头片尾</div>
+              <div class="pref-desc">学习你的跳过习惯，自动提示</div>
+            </div>
+            <div class="pref-control">
+              <label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+            </div>
+          </div>
+          <div class="pref-row">
+            <div class="pref-row-label"><div class="pref-label">进入播放时全屏</div></div>
+            <div class="pref-control">
+              <label class="toggle"><input type="checkbox"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+            </div>
+          </div>
+        </div>
+        <div class="pref-section">
+          <div class="pref-section-title">跳转步长</div>
+          <div class="pref-row">
+            <div class="pref-row-label"><div class="pref-label">← → 跳转（短）</div></div>
+            <div class="pref-control">
+              <select class="pref-select">
+                <option>3 秒</option>
+                <option selected>5 秒</option>
+                <option>10 秒</option>
+              </select>
+            </div>
+          </div>
+          <div class="pref-row">
+            <div class="pref-row-label"><div class="pref-label">⇧← ⇧→ 跳转（长）</div></div>
+            <div class="pref-control">
+              <select class="pref-select">
+                <option>15 秒</option>
+                <option selected>30 秒</option>
+                <option>60 秒</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="pref-section">
+          <div class="pref-section-title">Vim 模式</div>
+          <div class="pref-row">
+            <div class="pref-row-label">
+              <div class="pref-label">启用 Vim 键位</div>
+              <div class="pref-desc">hjkl 导航、gg/G 跳帧、: 命令模式</div>
+            </div>
+            <div class="pref-control">
+              <label class="toggle"><input type="checkbox"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 字幕 -->
+      <div class="pref-page" id="page-subtitles">
+        <div class="pref-title">字幕</div>
+        <div class="pref-section">
+          <div class="pref-section-title">显示</div>
+          <div class="pref-row">
+            <div class="pref-row-label"><div class="pref-label">字体</div></div>
+            <div class="pref-control"><select class="pref-select"><option selected>PingFang SC</option><option>Noto Sans CJK</option><option>思源黑体</option></select></div>
+          </div>
+          <div class="pref-row">
+            <div class="pref-row-label"><div class="pref-label">字号</div></div>
+            <div class="pref-control"><input type="range" min="14" max="36" value="22" style="width:100px"><span style="font-size:13px;color:var(--text-secondary);width:32px">22px</span></div>
+          </div>
+          <div class="pref-row">
+            <div class="pref-row-label"><div class="pref-label">描边</div></div>
+            <div class="pref-control">
+              <label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+            </div>
+          </div>
+          <div class="pref-row">
+            <div class="pref-row-label"><div class="pref-label">双语模式</div></div>
+            <div class="pref-control">
+              <label class="toggle"><input type="checkbox"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+            </div>
+          </div>
+        </div>
+        <div class="pref-section">
+          <div class="pref-section-title">自动生成（Whisper）</div>
+          <div class="pref-row">
+            <div class="pref-row-label">
+              <div class="pref-label">默认模型</div>
+              <div class="pref-desc">更大的模型精度更高但更慢</div>
+            </div>
+            <div class="pref-control">
+              <select class="pref-select"><option>Tiny（最快）</option><option selected>Small</option><option>Medium</option><option>Large（最准）</option></select>
+            </div>
+          </div>
+          <div class="pref-row">
+            <div class="pref-row-label"><div class="pref-label">自动检测语言</div></div>
+            <div class="pref-control"><label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 音频 -->
+      <div class="pref-page" id="page-audio">
+        <div class="pref-title">音频</div>
+        <div class="pref-section">
+          <div class="pref-section-title">响度</div>
+          <div class="pref-row">
+            <div class="pref-row-label">
+              <div class="pref-label">自动响度归一化</div>
+              <div class="pref-desc">统一各视频的音量大小</div>
+            </div>
+            <div class="pref-control"><label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label></div>
+          </div>
+          <div class="pref-row">
+            <div class="pref-row-label"><div class="pref-label">目标响度</div></div>
+            <div class="pref-control"><select class="pref-select"><option>-23 LUFS（广播）</option><option selected>-16 LUFS（流媒体）</option><option>-14 LUFS（YouTube）</option></select></div>
+          </div>
+        </div>
+        <div class="pref-section">
+          <div class="pref-section-title">深夜模式 ⌘⇧M</div>
+          <div class="pref-row">
+            <div class="pref-row-label"><div class="pref-label">默认深夜模式强度</div></div>
+            <div class="pref-control"><select class="pref-select"><option selected>轻度</option><option>中度</option><option>深夜</option></select></div>
+          </div>
+          <div class="pref-row">
+            <div class="pref-row-label">
+              <div class="pref-label">按时间自动启用</div>
+              <div class="pref-desc">晚上 10 点后自动开启深夜模式</div>
+            </div>
+            <div class="pref-control"><label class="toggle"><input type="checkbox"><div class="toggle-track"></div><div class="toggle-thumb"></div></label></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 画质增强 -->
+      <div class="pref-page" id="page-enhancement">
+        <div class="pref-title">画质增强</div>
+        <div class="pref-section">
+          <div class="pref-section-title">默认行为</div>
+          <div class="pref-row">
+            <div class="pref-row-label">
+              <div class="pref-label">播放时默认开启增强</div>
+            </div>
+            <div class="pref-control"><label class="toggle"><input type="checkbox"><div class="toggle-track"></div><div class="toggle-thumb"></div></label></div>
+          </div>
+          <div class="pref-row">
+            <div class="pref-row-label"><div class="pref-label">默认预设</div></div>
+            <div class="pref-control"><select class="pref-select"><option selected>自动（根据内容类型）</option><option>老片救星</option><option>番剧增强</option><option>最快速度</option></select></div>
+          </div>
+        </div>
+        <div class="pref-section">
+          <div class="pref-section-title">性能</div>
+          <div class="pref-row">
+            <div class="pref-row-label">
+              <div class="pref-label">温控降级</div>
+              <div class="pref-desc">GPU 超过 90°C 时自动降低增强强度</div>
+            </div>
+            <div class="pref-control"><label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label></div>
+          </div>
+          <div class="pref-row">
+            <div class="pref-row-label">
+              <div class="pref-label">续航模式</div>
+              <div class="pref-desc">使用电池时自动关闭神经网络滤镜</div>
+            </div>
+            <div class="pref-control"><label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label></div>
+          </div>
+          <div class="pref-row">
+            <div class="pref-row-label"><div class="pref-label">处理后端</div></div>
+            <div class="pref-control"><select class="pref-select"><option selected>自动（推荐）</option><option>CoreML（Apple Silicon）</option><option>CPU（慢，兼容性好）</option></select></div>
+          </div>
+        </div>
+        <div class="pref-section">
+          <div class="pref-section-title">模型</div>
+          <div class="pref-row">
+            <div class="pref-row-label">
+              <div class="pref-label">NAFNet-REDS-width64</div>
+              <div class="pref-desc">降噪模型 · 263 MB</div>
+            </div>
+            <div class="pref-control"><span class="badge badge-success">已下载</span><button class="btn btn-secondary btn-sm" style="margin-left:8px">删除</button></div>
+          </div>
+          <div class="pref-row">
+            <div class="pref-row-label">
+              <div class="pref-label">RealESRGAN x4plus</div>
+              <div class="pref-desc">超分模型 · 66 MB</div>
+            </div>
+            <div class="pref-control"><span class="badge badge-success">已下载</span></div>
+          </div>
+          <div class="pref-row">
+            <div class="pref-row-label">
+              <div class="pref-label">RIFE v4.6</div>
+              <div class="pref-desc">插帧模型 · 45 MB</div>
+            </div>
+            <div class="pref-control"><button class="btn btn-primary btn-sm">下载</button></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI 智能 -->
+      <div class="pref-page" id="page-ai">
+        <div class="pref-title">AI 智能</div>
+        <div class="pref-section">
+          <div class="pref-section-title">自动分类</div>
+          <div class="pref-row">
+            <div class="pref-row-label">
+              <div class="pref-label">添加视频时自动分类</div>
+              <div class="pref-desc">使用 CLIP 识别内容类型和场景</div>
+            </div>
+            <div class="pref-control"><label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label></div>
+          </div>
+        </div>
+        <div class="pref-section">
+          <div class="pref-section-title">角色识别</div>
+          <div class="pref-row">
+            <div class="pref-row-label">
+              <div class="pref-label">启用角色识别</div>
+              <div class="pref-desc">使用 RetinaFace + ArcFace 识别人物</div>
+            </div>
+            <div class="pref-control"><label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label></div>
+          </div>
+          <div class="pref-row">
+            <div class="pref-row-label">
+              <div class="pref-label">仅在充电时运行</div>
+            </div>
+            <div class="pref-control"><label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label></div>
+          </div>
+          <div class="pref-row">
+            <div class="pref-row-label"><div class="pref-label">最低置信度</div></div>
+            <div class="pref-control"><input type="range" min="50" max="99" value="85" style="width:100px"><span style="font-size:13px;color:var(--text-secondary);width:32px">85%</span></div>
+          </div>
+        </div>
+        <div class="pref-section">
+          <div class="pref-section-title">自然语言搜索</div>
+          <div class="pref-row">
+            <div class="pref-row-label">
+              <div class="pref-label">建立向量索引</div>
+              <div class="pref-desc">提取关键帧嵌入，支持 ⌘F 语义搜索</div>
+            </div>
+            <div class="pref-control"><label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 快捷键 -->
+      <div class="pref-page" id="page-shortcuts">
+        <div class="pref-title">快捷键</div>
+        <div style="margin-bottom:var(--sp-md);display:flex;gap:var(--sp-sm)">
+          <select class="pref-select">
+            <option selected>默认</option>
+            <option>Vim 风格</option>
+            <option>IINA 风格</option>
+            <option>VLC 风格</option>
+            <option>mpv 风格</option>
+          </select>
+          <button class="btn btn-secondary btn-sm">导入…</button>
+          <button class="btn btn-secondary btn-sm">导出…</button>
+          <button class="btn btn-ghost btn-sm">恢复默认</button>
+        </div>
+        <div class="pref-section">
+          <div class="kbd-category">播放控制</div>
+          <div class="kbd-row"><span class="kbd-action">播放 / 暂停</span><span class="kbd-tag">Space</span></div>
+          <div class="kbd-row"><span class="kbd-action">后退 5 秒</span><span class="kbd-tag">←</span></div>
+          <div class="kbd-row"><span class="kbd-action">前进 5 秒</span><span class="kbd-tag">→</span></div>
+          <div class="kbd-row"><span class="kbd-action">后退 30 秒</span><span class="kbd-tag">⇧←</span></div>
+          <div class="kbd-row"><span class="kbd-action">前进 30 秒</span><span class="kbd-tag">⇧→</span></div>
+          <div class="kbd-row"><span class="kbd-action">全屏</span><span class="kbd-tag">F</span></div>
+          <div class="kbd-row"><span class="kbd-action">截图</span><span class="kbd-tag">S</span></div>
+          <div class="kbd-category">媒体库</div>
+          <div class="kbd-row"><span class="kbd-action">命令面板</span><span class="kbd-tag">⌘K</span></div>
+          <div class="kbd-row"><span class="kbd-action">全局搜索</span><span class="kbd-tag">⌘F</span></div>
+          <div class="kbd-row"><span class="kbd-action">网格视图</span><span class="kbd-tag">⌘1</span></div>
+          <div class="kbd-row"><span class="kbd-action">列表视图</span><span class="kbd-tag">⌘2</span></div>
+          <div class="kbd-row"><span class="kbd-action">移到回收站</span><span class="kbd-tag">⌘⌫</span></div>
+          <div class="kbd-category">AI 功能</div>
+          <div class="kbd-row"><span class="kbd-action">生成字幕</span><span class="kbd-tag">⌘J</span></div>
+          <div class="kbd-row"><span class="kbd-action">生成摘要</span><span class="kbd-tag">⌘U</span></div>
+          <div class="kbd-row"><span class="kbd-action">画质增强</span><span class="kbd-tag">⌘E</span></div>
+          <div class="kbd-row"><span class="kbd-action">音频增强</span><span class="kbd-tag">⌘⌥A</span></div>
+          <div class="kbd-row"><span class="kbd-action">深夜模式</span><span class="kbd-tag">⌘⇧M</span></div>
+        </div>
+      </div>
+
+      <!-- 存储 -->
+      <div class="pref-page" id="page-storage">
+        <div class="pref-title">存储</div>
+        <div class="pref-section">
+          <div class="pref-section-title">监视文件夹</div>
+          <div class="pref-row">
+            <div class="pref-row-label">
+              <div class="pref-label">/Users/hikari/Movies</div>
+              <div class="pref-desc">342 个视频 · 上次扫描 3 分钟前</div>
+            </div>
+            <div class="pref-control">
+              <div class="dot dot-online"></div>
+              <button class="btn btn-secondary btn-sm">重新扫描</button>
+              <button class="btn btn-destructive btn-sm">移除</button>
+            </div>
+          </div>
+          <div class="pref-row">
+            <div class="pref-row-label">
+              <div class="pref-label">/Volumes/NAS/影视</div>
+              <div class="pref-desc">856 个视频 · 上次扫描 2 小时前</div>
+            </div>
+            <div class="pref-control">
+              <div class="dot dot-online"></div>
+              <button class="btn btn-secondary btn-sm">重新扫描</button>
+              <button class="btn btn-destructive btn-sm">移除</button>
+            </div>
+          </div>
+          <div class="pref-row">
+            <button class="btn btn-secondary btn-sm">+ 添加文件夹</button>
+          </div>
+        </div>
+        <div class="pref-section">
+          <div class="pref-section-title">删除行为</div>
+          <div class="pref-row">
+            <div class="pref-row-label">
+              <div class="pref-label">删除时</div>
+            </div>
+            <div class="pref-control">
+              <select class="pref-select">
+                <option selected>移到回收站（可撤销）</option>
+                <option>永久删除</option>
+                <option>总是询问</option>
+              </select>
+            </div>
+          </div>
+          <div class="pref-row">
+            <div class="pref-row-label">
+              <div class="pref-label">撤销历史保留时长</div>
+            </div>
+            <div class="pref-control">
+              <select class="pref-select">
+                <option>15 分钟</option>
+                <option selected>30 分钟</option>
+                <option>1 小时</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="pref-section">
+          <div class="pref-section-title">缩略图缓存</div>
+          <div class="pref-row">
+            <div class="pref-row-label">
+              <div class="pref-label">缓存大小</div>
+              <div class="pref-desc">当前占用：2.3 GB</div>
+            </div>
+            <div class="pref-control"><button class="btn btn-secondary btn-sm">清除缓存</button></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 算力节点（链接到独立页面） -->
+      <div class="pref-page" id="page-nodes">
+        <div class="pref-title">算力节点</div>
+        <div style="text-align:center;padding:var(--sp-xxxl)">
+          <div style="font-size:48px;margin-bottom:var(--sp-md)">🖥</div>
+          <div style="font-size:17px;margin-bottom:var(--sp-sm)">算力节点设置</div>
+          <div style="font-size:14px;color:var(--text-secondary);margin-bottom:var(--sp-xl)">在专用页面中管理节点</div>
+          <a href="10-node-settings.html" class="btn btn-primary">打开算力节点设置 →</a>
+        </div>
+      </div>
+
+      <!-- 隐私 -->
+      <div class="pref-page" id="page-privacy">
+        <div class="pref-title">隐私</div>
+        <div class="pref-section">
+          <div class="pref-section-title">数据处理</div>
+          <div class="pref-row">
+            <div class="pref-row-label">
+              <div class="pref-label">所有 AI 推理本地完成</div>
+              <div class="pref-desc">视频和媒体库数据不会上传到云端</div>
+            </div>
+            <div class="pref-control"><span class="badge badge-success">✓ 已启用</span></div>
+          </div>
+          <div class="pref-row">
+            <div class="pref-row-label">
+              <div class="pref-label">HiPixel 远程处理</div>
+              <div class="pref-desc">仅在你主动发起时才传输到远程节点</div>
+            </div>
+            <div class="pref-control"><label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label></div>
+          </div>
+        </div>
+        <div class="pref-section">
+          <div class="pref-section-title">数据库与缓存</div>
+          <div class="pref-row">
+            <div class="pref-row-label">
+              <div class="pref-label">媒体库数据库</div>
+              <div class="pref-desc">~/.hivideo/library.db · 128 MB</div>
+            </div>
+            <div class="pref-control"><button class="btn btn-secondary btn-sm">在 Finder 中显示</button></div>
+          </div>
+          <div class="pref-row">
+            <div class="pref-row-label">
+              <div class="pref-label">重置所有数据</div>
+              <div class="pref-desc">清除媒体库、缩略图、向量索引（不删除视频文件）</div>
+            </div>
+            <div class="pref-control"><button class="btn btn-destructive btn-sm">重置…</button></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 关于 -->
+      <div class="pref-page" id="page-about">
+        <div class="about-hero">
+          <div class="about-icon">▶</div>
+          <div style="font-size:24px;font-weight:300">HiVideo</div>
+          <div class="about-version">版本 1.0.0 (build 2026.06.04)</div>
+          <div style="font-size:13px;color:var(--text-tertiary);margin-top:var(--sp-xs)">仅适用于 Apple Silicon (M1/M2/M3/M4)</div>
+        </div>
+        <div class="pref-section">
+          <div class="pref-row">
+            <div class="pref-row-label"><div class="pref-label">hipixel-core</div></div>
+            <div class="pref-control"><span style="font-size:13px;color:var(--text-secondary)">v0.1.0-alpha</span></div>
+          </div>
+          <div class="pref-row">
+            <div class="pref-row-label"><div class="pref-label">开发者</div></div>
+            <div class="pref-control"><span style="font-size:13px;color:var(--text-secondary)">Hikari-Zhang</span></div>
+          </div>
+          <div class="pref-row">
+            <div class="pref-row-label"><div class="pref-label">许可证</div></div>
+            <div class="pref-control"><span style="font-size:13px;color:var(--text-secondary)">Apache 2.0</span></div>
+          </div>
+          <div class="pref-row">
+            <div class="pref-row-label"><div class="pref-label">GitHub</div></div>
+            <div class="pref-control"><a href="#" style="font-size:13px;color:var(--accent)">github.com/Hikari-Zhang/HiVideo</a></div>
+          </div>
+        </div>
+        <div style="text-align:center;margin-top:var(--sp-xl)">
+          <button class="btn btn-secondary">检查更新</button>
+        </div>
+      </div>
+
+    </div><!-- /prefs-content -->
+  </div><!-- /prefs-body -->
+</div>
+</div>
+
+<script>
+function showPage(id, navItem) {
+  document.querySelectorAll('.pref-page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  navItem.classList.add('active');
+}
+</script>
+</body>
+</html>
