@@ -11,7 +11,7 @@
 |---|---|---|---|
 | Phase 0 · hipixel-core 内核抽离 + CLI（**Python 优先**） | ✅ 完成 | 3 周 | ~90% |
 | **Phase 0.5 · UI/UX 设计与原型** | 🔄 进行中 | **3 周** | ~65% |
-| Phase 1 · HiVideo MVP 播放器 | ⏸ 未开始 | 6 周 | 0% |
+| **Phase 1 · HiVideo MVP 播放器** | 🔄 进行中 | 6 周 | ~70% |
 | Phase 2 · HiPixel MVP Web 服务 | ⏸ 未开始 | 5 周 | 0% |
 | **Phase 2.5 · hipixel-core Rust 内核迁移** | ⏸ 未开始 | **3 周** | 0% |
 | Phase 3 · HiVideo AI 入场 | ⏸ 未开始 | 6 周 | 0% |
@@ -267,69 +267,72 @@
 
 ### 1.0 设计走查（Day 1）
 
-- [ ] 🔴 与设计稿对照，确认本 Phase 涉及的所有界面已完成
-- [ ] 🔴 找出不足的设计稿，回 Phase 0.5 补齐
-- [ ] 🟡 设计 token 导入到 Xcode 资产目录
+- [x] 🔴 与设计稿对照，确认本 Phase 涉及的所有界面已完成（Phase 0.5 HTML 视觉稿全部完成）
+- [x] 🔴 找出不足的设计稿，回 Phase 0.5 补齐（Backlog 已清零）
+- [x] 🟡 设计 token 导入到 Xcode — `HiVideoDesign/Tokens/` 已就绪，直接 import
 
 ### 1.1 Xcode 项目骨架（Week 1）
 
-- [ ] 🔴 创建 Xcode 项目：HiVideo / SwiftUI / macOS 14+
-- [ ] 🔴 配置 Bundle ID + 团队签名
-- [ ] 🔴 模块拆分：PlaybackKit / MediaKit / AIKit / PluginKit / App
-- [ ] 🔴 引入 SwiftPM 依赖：FFmpegKit / hipixel-core（Swift binding）
-- [ ] 🟡 配置 SwiftLint + SwiftFormat
-- [ ] 🟡 配置 GitHub Actions：build + test
-- [ ] 🟡 设置最低部署目标 + Apple Silicon Only
+- [x] 🔴 创建 Xcode 项目：HiVideo / SwiftUI / macOS 14+（`hipixel-app/HiVideo/HiVideo.xcodeproj`）
+- [ ] 🔴 配置 Bundle ID + 团队签名（需在 Xcode 中手动配置签名）
+- [x] 🔴 模块拆分：PlaybackKit / MediaKit / AIKit(stub) / PluginKit(stub)（4 个本地 Package）
+- [x] 🔴 引入 SwiftPM 依赖：GRDB.swift（MediaKit）；AVFoundation+VideoToolbox 系统框架
+- [ ] 🟡 配置 SwiftLint + SwiftFormat（.swiftlint.yml 待添加）
+- [x] 🟡 配置 GitHub Actions：`.github/workflows/hivideo.yml` build + test
+- [x] 🟡 设置最低部署目标 macOS 14+ / Apple Silicon Only
 
 ### 1.2 PlaybackKit 框架（Week 2-3）
 
-- [ ] 🔴 定义 `Player` 协议（play / pause / seek / rate）
-- [ ] 🔴 实现基于 AVPlayer 的简单后端（先跑通）
-- [ ] 🔴 实现基于 FFmpeg + VideoToolbox 的高级后端
-- [ ] 🔴 Metal 渲染层（CAMetalLayer + 自定义 shader）
-- [ ] 🔴 音视频同步（PTS 对齐）
+- [x] 🔴 定义 `Player` 协议（play / pause / seek / rate）— `Player.swift`
+- [ ] 🔴 实现基于 AVPlayer 的简单后端（先跑通）— 暂跳过，直接走 AVFoundation+VideoToolbox
+- [x] 🔴 实现基于 AVFoundation + VideoToolbox 的高级后端 — `HiVideoPlayer.swift`
+- [x] 🔴 Metal 渲染层（MTKView + CVMetalTextureCache + inline shader）— `MetalRenderer.swift`
+- [x] 🔴 音视频同步（CVDisplayLink 计时 + PTS 对齐）— `HiVideoPlayer.swift`
 - [ ] 🟡 倍速不变调（AVAudioUnitTimePitch）
 - [ ] 🟡 帧步进（前 / 后）
-- [ ] 🟡 字幕轨道选择
-- [ ] 🟡 多音轨切换
-- [ ] 🟡 HDR 元数据透传
+- [x] 🟡 字幕轨道选择（`TrackInfo` + `selectedSubtitleTrack`）— 协议已定义，UI 待接入
+- [x] 🟡 多音轨切换（`selectedAudioTrack`）— 协议已定义
+- [x] 🟡 HDR 元数据透传 — `HDRMetadata` + `HDRBadge` + `detectHDR()`
 
 ### 1.3 极简 UI（Week 4）
 
-- [ ] 🔴 启动屏（拖入提示 + 最近播放）
-- [ ] 🔴 沉浸式播放窗（无边框 + 浮现控制条）
-- [ ] 🔴 控制条：播放 / 进度 / 音量 / 全屏
-- [ ] 🟡 时间轴预览（缩略图）
-- [ ] 🟡 字幕菜单
-- [ ] 🟡 音轨菜单
+- [x] 🔴 启动屏（拖入提示 + 最近播放）— `LaunchView.swift`
+- [x] 🔴 沉浸式播放窗（无边框 + 浮现控制条）— `PlayerWindowView.swift`
+- [x] 🔴 控制条：播放 / 进度 / 音量 / 全屏 — `PlayerControlBar`（含拖动进度条）
+- [ ] 🟡 时间轴预览（悬停缩略图）
+- [ ] 🟡 字幕菜单（UI 接入）
+- [ ] 🟡 音轨菜单（UI 接入）
 - [ ] 🟢 截图功能（⌘⇧S）
 
 ### 1.4 媒体库 v1（Week 5）
 
-- [ ] 🔴 SQLite 数据库 schema 设计
-- [ ] 🔴 添加监视文件夹
-- [ ] 🔴 后台扫描器（增量）
-- [ ] 🔴 提取元数据（分辨率 / 时长 / 编码）
-- [ ] 🟡 生成时间轴缩略图
-- [ ] 🔴 网格视图 UI
-- [ ] 🟡 列表视图 UI
-- [ ] 🔴 续播位置记录
-- [ ] 🟡 详情面板（侧边滑入）
+- [x] 🔴 SQLite 数据库 schema 设计 — `Schema.swift`（GRDB migrations）
+- [x] 🔴 添加监视文件夹 — `MediaLibrary.addWatchFolder()`
+- [x] 🔴 后台扫描器（增量）— `FolderScanner.swift`
+- [x] 🔴 提取元数据（分辨率 / 时长 / 编码）— `MetadataExtractor.swift`
+- [x] 🟡 生成时间轴缩略图 — `ThumbnailGenerator.swift`
+- [x] 🔴 网格视图 UI — `MediaLibraryView.swift`（LazyVGrid + PosterGridCell）
+- [x] 🟡 列表视图 UI — `PosterListRow`
+- [x] 🔴 续播位置记录 — `MediaLibrary.updateResumePosition()`
+- [x] 🟡 详情面板（侧边滑入）— `MediaDetailView.swift`（含 4 个 Tab）
 
 ### 1.5 基础快捷键（Week 6）
 
-- [ ] 🔴 Space 播放暂停
-- [ ] 🔴 ←→ ±5s / ⇧←→ ±30s
-- [ ] 🔴 ↑↓ 音量 / M 静音
-- [ ] 🔴 F 全屏 / ⌘W 关闭
-- [ ] 🔴 ⌘O 打开文件 / ⌘⇧O 打开文件夹
+- [x] 🔴 Space 播放暂停 — `.onKeyPress(.space)` in `PlayerWindowView`
+- [x] 🔴 ←→ ±5s — `.onKeyPress(.leftArrow/.rightArrow)`
+- [ ] 🔴 ⇧←→ ±30s — 待补充 modifier key 判断
+- [x] 🔴 ↑↓ 音量 — `.onKeyPress(.upArrow/.downArrow)`
+- [x] 🔴 M 静音 — `.onKeyPress(characters: "mM")`
+- [x] 🔴 F 全屏 — `.onKeyPress(characters: "fF")`
+- [x] 🔴 ⌘W 关闭 — 系统默认
+- [x] 🔴 ⌘O 打开文件 / ⌘⇧O 打开文件夹 — `HiVideoCommands`
 - [ ] 🟡 [ ] 变速
 - [ ] 🟡 0-9 百分比跳转
 - [ ] 🟢 ⌘K 命令面板（先放占位）
 
 ### 1.6 MVP 验收
 
-- [ ] 🔴 能播 1080p H.264 / H.265 流畅
+- [ ] 🔴 能播 1080p H.264 / H.265 流畅（**需 Xcode 添加 Package 依赖后实测**）
 - [ ] 🔴 4K HDR CPU < 8%（M1）
 - [ ] 🔴 启动时间 < 1.5s
 - [ ] 🔴 内存 < 400MB
