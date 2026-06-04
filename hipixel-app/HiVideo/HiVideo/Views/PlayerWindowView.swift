@@ -98,27 +98,19 @@ struct AVPlayerLayerView: NSViewRepresentable {
 
     func makeNSView(context: Context) -> NSView {
         let view = NSView()
+        // 先设 layer，再设 wantsLayer=true
+        // NSView 会把 layer 作为自己的 backing layer（而非 sublayer）
+        view.layer = context.coordinator.playerLayer
         view.wantsLayer = true
-        view.layer?.backgroundColor = CGColor.black
-
-        // AVPlayerLayer を sublayer として追加
-        context.coordinator.playerLayer.frame = view.bounds
-        context.coordinator.playerLayer.autoresizingMask = [.layerWidthSizable, .layerHeightSizable]
-        view.layer?.addSublayer(context.coordinator.playerLayer)
         return view
     }
 
     func updateNSView(_ nsView: NSView, context: Context) {
-        CATransaction.begin()
-        CATransaction.setDisableActions(true)
-        context.coordinator.playerLayer.frame = nsView.bounds
-        CATransaction.commit()
+        // player 引用不变，layer 已绑定，无需操作
     }
 
-    // Coordinator 持有 AVPlayerLayer，避免 SwiftUI 重建时丢失
     final class Coordinator: NSObject {
         let playerLayer: AVPlayerLayer
-
         init(player: AVPlayer) {
             playerLayer = AVPlayerLayer(player: player)
             playerLayer.videoGravity = .resizeAspect
