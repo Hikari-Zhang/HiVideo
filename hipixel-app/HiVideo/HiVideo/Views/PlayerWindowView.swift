@@ -14,10 +14,11 @@ struct PlayerWindowView: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            // ── 视频画面（AVPlayerLayer）──
-            Color.black.ignoresSafeArea()
+            // 视频画面 — AVPlayerLayer
+            // Color.black 故意移除：它会覆盖在 AVPlayerLayer 上面
             AVPlayerLayerView(player: player.avPlayer)
                 .ignoresSafeArea()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             // ── HDR 标识 ──
             if let hdr = player.hdrMetadata {
@@ -140,6 +141,17 @@ struct AVPlayerLayerView: NSViewRepresentable {
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
             print("[PlayerHostView] didMoveToWindow  window=\(window == nil ? "nil" : "ok")  layer===playerLayer:\(layer === playerLayer)")
+            // window に入ったら即座に layout を強制
+            if window != nil {
+                needsLayout = true
+                layoutSubtreeIfNeeded()
+            }
+        }
+
+        override func viewDidMoveToSuperview() {
+            super.viewDidMoveToSuperview()
+            print("[PlayerHostView] didMoveToSuperview  layer.superlayer=\(playerLayer.superlayer == nil ? "nil" : "ok")")
+            needsLayout = true
         }
     }
 }
