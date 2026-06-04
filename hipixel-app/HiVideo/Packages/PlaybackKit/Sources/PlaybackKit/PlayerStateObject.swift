@@ -1,21 +1,17 @@
-// PlayerState.swift — PlaybackKit
+// PlayerStateObject.swift — PlaybackKit
 // 可观察的播放器状态，供 SwiftUI 视图绑定
-// 与 HiVideoDesign/Components/PlayerControls.swift 中的 PlayerState 合并为统一状态层
 
 import Foundation
 import CoreMedia
 import Combine
 import SwiftUI
 
-/// 可观察的播放器状态对象，SwiftUI 视图通过 @ObservedObject / @StateObject 使用
 @MainActor
 public final class PlayerStateObject: ObservableObject {
 
-    // MARK: - Published State
-
     @Published public var status: PlaybackStatus = .idle
-    @Published public var currentTime: Double = 0          // 秒
-    @Published public var duration: Double = 0             // 秒
+    @Published public var currentTime: Double = 0
+    @Published public var duration: Double = 0
     @Published public var volume: Float = 1.0
     @Published public var isMuted: Bool = false
     @Published public var rate: Float = 1.0
@@ -28,28 +24,26 @@ public final class PlayerStateObject: ObservableObject {
     @Published public var selectedAudioTrack: Int = 0
     @Published public var selectedSubtitleTrack: Int? = nil
 
-    // MARK: - Computed
-
     public var progress: Double {
         guard duration > 0 else { return 0 }
         return currentTime / duration
     }
-
     public var isPlaying: Bool { status == .playing }
-    public var isLoaded: Bool { status == .ready || status == .playing || status == .paused || status == .buffering }
-
-    // MARK: - Internal Player Reference
+    public var isLoaded: Bool {
+        status == .ready || status == .playing ||
+        status == .paused || status == .buffering
+    }
 
     private weak var player: (any Player)?
     private var cancellables = Set<AnyCancellable>()
 
     public init() {}
 
-    // MARK: - Bind to Player
+    // MARK: - Bind
 
-    /// 绑定到播放器实例，自动同步状态
     public func bind(to player: any Player) {
         self.player = player
+        cancellables.removeAll()
 
         player.statusPublisher
             .receive(on: DispatchQueue.main)
@@ -59,12 +53,21 @@ public final class PlayerStateObject: ObservableObject {
         player.timePublisher
             .receive(on: DispatchQueue.main)
             .sink { [weak self] t in
-                self?.currentTime = t.seconds
+                guard let self else { return }
+                self.currentTime = t.seconds.isFinite ? t.seconds : 0
+                // duration 在 status 变为 ready 后更新
+                let d = player.duration.seconds
+                if d.isFinite && d > 0 { self.duration = d }
             }
             .store(in: &cancellables)
+
+        // 立即同步当前状态
+        status   = player.status
+        duration = player.duration.seconds.isFinite ? player.duration.seconds : 0
+        videoSize = player.videoSize
     }
 
-    // MARK: - Actions (forwarded to Player)
+    // MARK: - Actions
 
     public func play()  { player?.play() }
     public func pause() { player?.pause() }
@@ -75,7 +78,8 @@ public final class PlayerStateObject: ObservableObject {
     }
 
     public func skip(by seconds: Double) {
-        Task { await player?.skip(by: seconds) }
+        let target = max(0, min(currentTime + seconds, duration))
+        seek(to: target)
     }
 
     public func togglePlayPause() {
@@ -83,25 +87,19 @@ public final class PlayerStateObject: ObservableObject {
     }
 
     public func setVolume(_ v: Float) {
-        volume = v
-        player?.volume = v
+        volume = v; player?.volume = v
     }
 
     public func toggleMute() {
-        isMuted.toggle()
-        player?.isMuted = isMuted
+        isMuted.toggle(); player?.isMuted = isMuted
     }
 
-    // MARK: - Format Helpers
+    // MARK: - Formatting
 
     public func formattedTime(_ seconds: Double) -> String {
         let s = Int(max(0, seconds))
-        let h = s / 3600
-        let m = (s % 3600) / 60
-        let sec = s % 60
-        if h > 0 {
-            return String(format: "%d:%02d:%02d", h, m, sec)
-        }
+        let h = s / 3600, m = (s % 3600) / 60, sec = s % 60
+        if h > 0 { return String(format: "%d:%02d:%02d", h, m, sec) }
         return String(format: "%02d:%02d", m, sec)
     }
 }
