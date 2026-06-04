@@ -126,12 +126,38 @@ struct AVPlayerLayerView: NSViewRepresentable {
 
         override func layout() {
             super.layout()
-            // 每次 bounds 变化都同步 layer frame（这是 updateNSView 无法做到的）
             CATransaction.begin()
             CATransaction.setDisableActions(true)
             playerLayer.frame = bounds
             CATransaction.commit()
-            print("[PlayerHostView] layout() bounds=\(bounds) readyForDisplay=\(playerLayer.isReadyForDisplay)")
+
+            // 诊断：检查 layer 是否在 window 中，以及 superlayer 链
+            let inWindow = window != nil
+            let superL   = playerLayer.superlayer?.description ?? "nil"
+            print("[PlayerHostView] layout() bounds=\(bounds) readyForDisplay=\(playerLayer.isReadyForDisplay) inWindow=\(inWindow) superlayer=\(superL)")
+
+            // 每次 layout 后轮询 readyForDisplay，最多等 5 秒
+            if !playerLayer.isReadyForDisplay {
+                pollReadyForDisplay()
+            }
+        }
+
+        private func pollReadyForDisplay(count: Int = 0) {
+            guard count < 20 else {
+                print("[PlayerHostView] ❌ readyForDisplay never became true after 5s")
+                return
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+                guard let self else { return }
+                if self.playerLayer.isReadyForDisplay {
+                    print("[PlayerHostView] ✓ readyForDisplay=true at \(Double(count)*0.25)s  bounds=\(self.bounds)")
+                } else if count % 4 == 0 {
+                    print("[PlayerHostView] waiting... \(Double(count)*0.25)s  readyForDisplay=false")
+                    self.pollReadyForDisplay(count: count + 1)
+                } else {
+                    self.pollReadyForDisplay(count: count + 1)
+                }
+            }
         }
     }
 }

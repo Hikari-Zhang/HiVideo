@@ -138,7 +138,26 @@ public final class HiVideoPlayer: Player, ObservableObject {
                         self.duration  = item.duration
                         self.videoSize = self.extractVideoSize(from: item)
                         self.status    = .ready
-                        print("[Player] ✓ ready  dur=\(String(format:"%.1f",item.duration.seconds))s")
+
+                        // 视频轨道编码诊断
+                        let vTracks = item.asset.tracks(withMediaType: .video)
+                        print("[Player] ✓ ready  dur=\(String(format:"%.1f",item.duration.seconds))s  videoTracks=\(vTracks.count)")
+                        for (i, t) in vTracks.enumerated() {
+                            if let desc = t.formatDescriptions.first as? CMFormatDescription {
+                                let fcc = CMFormatDescriptionGetMediaSubType(desc)
+                                let s = String(bytes: [UInt8((fcc>>24)&0xFF),UInt8((fcc>>16)&0xFF),
+                                                        UInt8((fcc>>8)&0xFF),UInt8(fcc&0xFF)],
+                                               encoding: .ascii) ?? "????"
+                                print("[Player] videoTrack[\(i)] codec=\(s.trimmingCharacters(in:.whitespaces)) size=\(t.naturalSize) fps=\(String(format:"%.2f",t.nominalFrameRate))")
+                            }
+                        }
+                        // 1 秒后检查播放状态
+                        Task {
+                            try? await Task.sleep(nanoseconds: 1_000_000_000)
+                            let ltu = self.avPlayer.currentItem?.isPlaybackLikelyToKeepUp
+                            let err = self.avPlayer.currentItem?.error
+                            print("[Player] 1s check — likelyToKeepUp=\(String(describing:ltu))  error=\(String(describing:err))")
+                        }
                         finish()
                     case .failed:
                         let msg = item.error?.localizedDescription ?? "Unknown"
