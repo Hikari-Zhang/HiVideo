@@ -179,20 +179,6 @@ public enum MetadataExtractor {
 }
 
 
-import Foundation
-import AVFoundation
-
-// MARK: - VideoMetadata
-
-public struct VideoMetadata: Sendable {
-    public let duration: Double     // 秒
-    public let width: Int
-    public let height: Int
-    public let codec: String        // "h264", "hevc", "av1" 等
-    public let fileSize: Int64      // 字节
-    public let frameRate: Double    // fps
-}
-
 // MARK: - MetadataExtractor
 
 public enum MetadataExtractor {
