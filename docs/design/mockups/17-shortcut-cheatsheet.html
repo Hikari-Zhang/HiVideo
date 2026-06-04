@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>HiVideo · ⌘/ 快捷键速查</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  /* 背景：模拟媒体库 */
+  .bg {
+    height: calc(100vh - 40px);
+    background: var(--surface-background);
+    display: flex; align-items: flex-start; justify-content: center;
+    padding-top: 60px; position: relative; overflow: hidden;
+  }
+  .bg-faint {
+    position: absolute; inset: 0;
+    display: grid; grid-template-columns: repeat(8,1fr); gap: 8px;
+    padding: 20px; opacity: 0.07; pointer-events: none;
+  }
+
+  /* 面板主体 */
+  .cheatsheet {
+    width: 720px; max-height: calc(100vh - 160px);
+    background: rgba(36,36,40,0.97);
+    backdrop-filter: blur(40px) saturate(200%);
+    border: 0.5px solid var(--border-strong);
+    border-radius: var(--r-xl);
+    box-shadow: var(--shadow-xl);
+    overflow: hidden;
+    display: flex; flex-direction: column;
+    position: relative; z-index: 10;
+  }
+
+  /* 顶部 */
+  .cs-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: var(--sp-md) var(--sp-xl);
+    border-bottom: 0.5px solid var(--border-default);
+    flex-shrink: 0;
+  }
+  .cs-title { font-size: 15px; font-weight: 600; }
+  .cs-context {
+    display: flex; gap: var(--sp-xs);
+    background: var(--surface-secondary);
+    border-radius: var(--r-md); padding: 3px;
+  }
+  .ctx-btn {
+    padding: 4px 12px; border-radius: var(--r-sm); border: none;
+    background: transparent; color: var(--text-secondary);
+    font-size: 12px; cursor: pointer; transition: var(--anim-quick);
+  }
+  .ctx-btn.active { background: var(--surface-elevated); color: var(--text-primary); font-weight: 500; }
+  .cs-close {
+    background: transparent; border: none; color: var(--text-tertiary);
+    font-size: 18px; cursor: pointer; padding: 4px;
+  }
+
+  /* 搜索栏 */
+  .cs-search {
+    display: flex; align-items: center; gap: var(--sp-xs);
+    padding: var(--sp-sm) var(--sp-xl);
+    border-bottom: 0.5px solid var(--border-default);
+    flex-shrink: 0;
+  }
+  .cs-search input {
+    flex: 1; background: transparent; border: none;
+    color: var(--text-primary); font-size: 14px; outline: none;
+  }
+  .cs-search input::placeholder { color: var(--text-tertiary); }
+
+  /* 内容区：两列网格 */
+  .cs-body {
+    overflow-y: auto; padding: var(--sp-md) var(--sp-xl);
+    display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-md);
+  }
+
+  /* 分组卡片 */
+  .ks-group { }
+  .ks-group-title {
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--text-tertiary);
+    margin-bottom: var(--sp-xs);
+  }
+  .ks-group-body {
+    background: var(--surface-primary);
+    border: 0.5px solid var(--border-default);
+    border-radius: var(--r-lg); overflow: hidden;
+  }
+  .ks-row {
+    display: flex; align-items: center;
+    padding: 7px var(--sp-md);
+    border-bottom: 0.5px solid var(--border-default);
+    gap: var(--sp-sm);
+  }
+  .ks-row:last-child { border-bottom: none; }
+  .ks-action {
+    flex: 1; font-size: 13px; color: var(--text-secondary);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .ks-keys { display: flex; gap: 3px; flex-shrink: 0; }
+  .kbd {
+    display: inline-block;
+    background: var(--surface-secondary);
+    border: 0.5px solid var(--border-strong);
+    border-bottom-width: 2px;
+    border-radius: var(--r-sm);
+    padding: 2px 7px;
+    font-size: 11px; font-weight: 600; color: var(--text-secondary);
+    min-width: 24px; text-align: center;
+    box-shadow: 0 1px 0 var(--border-default);
+  }
+  .kbd.accent { border-color: var(--accent); color: var(--accent); background: rgba(10,132,255,0.08); }
+
+  /* 底部提示 */
+  .cs-footer {
+    padding: var(--sp-sm) var(--sp-xl);
+    border-top: 0.5px solid var(--border-default);
+    display: flex; align-items: center; gap: var(--sp-md);
+    font-size: 11px; color: var(--text-tertiary); flex-shrink: 0;
+  }
+
+  /* 搜索高亮 */
+  .ks-row.hidden { display: none; }
+  .ks-row.highlight .ks-action { color: var(--text-primary); }
+</style>
+</head>
+<body>
+<nav class="mockup-nav">
+  <a class="nav-home" href="index.html">Mockups</a>
+  <span class="separator">/</span>
+  <span class="current">17 · ⌘/ 快捷键速查</span>
+</nav>
+<div class="mockup-body">
+<div class="bg">
+  <!-- 背景海报 -->
+  <div class="bg-faint">
+    <script>
+      ['🎌','🦸','🎭','🌸','🚀','🎪','🔥','🌙','🎯','🌊','⚔️','🎶','🎌','🦸','🎭','🌸'].forEach(e=>{
+        document.write(`<div style="aspect-ratio:2/3;background:var(--surface-secondary);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:24px">${e}</div>`);
+      });
+    </script>
+  </div>
+
+  <div class="cheatsheet">
+    <!-- 标题 + 上下文切换 -->
+    <div class="cs-header">
+      <span class="cs-title">⌘/ 快捷键速查</span>
+      <div class="cs-context">
+        <button class="ctx-btn active" onclick="setContext('library',this)">媒体库</button>
+        <button class="ctx-btn" onclick="setContext('player',this)">播放中</button>
+        <button class="ctx-btn" onclick="setContext('subtitle',this)">字幕编辑</button>
+      </div>
+      <button class="cs-close" onclick="/* close */">✕</button>
+    </div>
+    <!-- 搜索 -->
+    <div class="cs-search">
+      <span style="color:var(--text-tertiary);font-size:14px">🔍</span>
+      <input id="ksSearch" type="text" placeholder="搜索快捷键或功能名…" oninput="filterKeys(this.value)">
+    </div>
+
+    <!-- 媒体库上下文 -->
+    <div class="cs-body" id="ctx-library">
+      <div class="ks-group">
+        <div class="ks-group-title">全局入口</div>
+        <div class="ks-group-body">
+          <div class="ks-row"><span class="ks-action">命令面板</span><div class="ks-keys"><span class="kbd accent">⌘</span><span class="kbd accent">K</span></div></div>
+          <div class="ks-row"><span class="ks-action">快捷键速查</span><div class="ks-keys"><span class="kbd accent">⌘</span><span class="kbd accent">/</span></div></div>
+          <div class="ks-row"><span class="ks-action">全局搜索</span><div class="ks-keys"><span class="kbd">⌘</span><span class="kbd">F</span></div></div>
+          <div class="ks-row"><span class="ks-action">偏好设置</span><div class="ks-keys"><span class="kbd">⌘</span><span class="kbd">,</span></div></div>
+          <div class="ks-row"><span class="ks-action">打开文件</span><div class="ks-keys"><span class="kbd">⌘</span><span class="kbd">O</span></div></div>
+          <div class="ks-row"><span class="ks-action">打开文件夹</span><div class="ks-keys"><span class="kbd">⌘</span><span class="kbd">⇧</span><span class="kbd">O</span></div></div>
+        </div>
+      </div>
+
+      <div class="ks-group">
+        <div class="ks-group-title">视图切换</div>
+        <div class="ks-group-body">
+          <div class="ks-row"><span class="ks-action">网格视图</span><div class="ks-keys"><span class="kbd">⌘</span><span class="kbd">1</span></div></div>
+          <div class="ks-row"><span class="ks-action">列表视图</span><div class="ks-keys"><span class="kbd">⌘</span><span class="kbd">2</span></div></div>
+          <div class="ks-row"><span class="ks-action">时间线视图</span><div class="ks-keys"><span class="kbd">⌘</span><span class="kbd">3</span></div></div>
+          <div class="ks-row"><span class="ks-action">显示/隐藏详情面板</span><div class="ks-keys"><span class="kbd">⌘</span><span class="kbd">⌥</span><span class="kbd">D</span></div></div>
+        </div>
+      </div>
+
+      <div class="ks-group">
+        <div class="ks-group-title">文件操作</div>
+        <div class="ks-group-body">
+          <div class="ks-row"><span class="ks-action">播放选中</span><div class="ks-keys"><span class="kbd">↩</span></div></div>
+          <div class="ks-row"><span class="ks-action">移到回收站</span><div class="ks-keys"><span class="kbd">⌘</span><span class="kbd">⌫</span></div></div>
+          <div class="ks-row"><span class="ks-action">从媒体库移除</span><div class="ks-keys"><span class="kbd">⌫</span></div></div>
+          <div class="ks-row"><span class="ks-action">重命名</span><div class="ks-keys"><span class="kbd">⌘</span><span class="kbd">L</span></div></div>
+          <div class="ks-row"><span class="ks-action">在 Finder 中显示</span><div class="ks-keys"><span class="kbd">⌘</span><span class="kbd">R</span></div></div>
+          <div class="ks-row"><span class="ks-action">全选</span><div class="ks-keys"><span class="kbd">⌘</span><span class="kbd">A</span></div></div>
+          <div class="ks-row"><span class="ks-action">收藏/取消收藏</span><div class="ks-keys"><span class="kbd">⌘</span><span class="kbd">B</span></div></div>
+          <div class="ks-row"><span class="ks-action">标记已看/未看</span><div class="ks-keys"><span class="kbd">⌘</span><span class="kbd">⇧</span><span class="kbd">M</span></div></div>
+        </div>
+      </div>
+
+      <div class="ks-group">
+        <div class="ks-group-title">AI 功能</div>
+        <div class="ks-group-body">
+          <div class="ks-row"><span class="ks-action">生成字幕（Whisper）</span><div class="ks-keys"><span class="kbd">⌘</span><span class="kbd">J</span></div></div>
+          <div class="ks-row"><span class="ks-action">翻译字幕</span><div class="ks-keys"><span class="kbd">⌘</span><span class="kbd">⇧</span><span class="kbd">J</span></div></div>
+          <div class="ks-row"><span class="ks-action">生成视频摘要</span><div class="ks-keys"><span class="kbd">⌘</span><span class="kbd">U</span></div></div>
+          <div class="ks-row"><span class="ks-action">AI 自然语言搜索</span><div class="ks-keys"><span class="kbd">⌘</span><span class="kbd">⇧</span><span class="kbd">F</span></div></div>
+          <div class="ks-row"><span class="ks-action">立即重新分类</span><div class="ks-keys"><span class="kbd">⌘</span><span class="kbd">⇧</span><span class="kbd">I</span></div></div>
+          <div class="ks-row"><span class="ks-action">算力节点设置</span><div class="ks-keys"><span class="kbd">⌘</span><span class="kbd">⌥</span><span class="kbd">N</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 播放器上下文 -->
+    <div class="cs-body" id="ctx-player" style="display:none">
+      <div class="ks-group">
+        <div class="ks-group-title">基础控制</div>
+        <div class="ks-group-body">
+          <div class="ks-row"><span class="ks-action">播放 / 暂停</span><div class="ks-keys"><span class="kbd accent">Space</span></div></div>
+          <div class="ks-row"><span class="ks-action">后退 5 秒</span><div class="ks-keys"><span class="kbd">←</span></div></div>
+          <div class="ks-row"><span class="ks-action">前进 5 秒</span><div class="ks-keys"><span class="kbd">→</span></div></div>
+          <div class="ks-row"><span class="ks-action">后退 30 秒</span><div class="ks-keys"><span class="kbd">⇧</span><span class="kbd">←</span></div></div>
+          <div class="ks-row"><span class="ks-action">前进 30 秒</span><div class="ks-keys"><span class="kbd">⇧</span><span class="kbd">→</span></div></div>
+          <div class="ks-row"><span class="ks-action">上一帧 / 下一帧</span><div class="ks-keys"><span class="kbd">,</span><span style="color:var(--text-tertiary);font-size:11px;padding:0 2px">/</span><span class="kbd">.</span></div></div>
+          <div class="ks-row"><span class="ks-action">全屏</span><div class="ks-keys"><span class="kbd">F</span></div></div>
+        </div>
+      </div>
+
+      <div class="ks-group">
+        <div class="ks-group-title">音量</div>
+        <div class="ks-group-body">
+          <div class="ks-row"><span class="ks-action">音量 +</span><div class="ks-keys"><span class="kbd">↑</span></div></div>
+          <div class="ks-row"><span class="ks-action">音量 −</span><div class="ks-keys"><span class="kbd">↓</span></div></div>
+          <div class="ks-row"><span class="ks-action">静音</span><div class="ks-keys"><span class="kbd">M</span></div></div>
+          <div class="ks-row"><span class="ks-action">深夜模式</span><div class="ks-keys"><span class="kbd">⌘</span><span class="kbd">⇧</span><span class="kbd">M</span></div></div>
+        </div>
+      </div>
+
+      <div class="ks-group">
+        <div class="ks-group-title">速度 / 跳转</div>
+        <div class="ks-group-body">
+          <div class="ks-row"><span class="ks-action">减速 0.25×</span><div class="ks-keys"><span class="kbd">[</span></div></div>
+          <div class="ks-row"><span class="ks-action">加速 0.25×</span><div class="ks-keys"><span class="kbd">]</span></div></div>
+          <div class="ks-row"><span class="ks-action">恢复 1× 速</span><div class="ks-keys"><span class="kbd">\</span></div></div>
+          <div class="ks-row"><span class="ks-action">跳转 0% ~ 90%</span><div class="ks-keys"><span class="kbd">0</span><span style="color:var(--text-tertiary);font-size:11px;padding:0 2px">~</span><span class="kbd">9</span></div></div>
+          <div class="ks-row"><span class="ks-action">上一章节</span><div class="ks-keys"><span class="kbd">⌘</span><span class="kbd">←</span></div></div>
+          <div class="ks-row"><span class="ks-action">下一章节</span><div class="ks-keys"><span class="kbd">⌘</span><span class="kbd">→</span></div></div>
+        </div>
+      </div>
+
+      <div class="ks-group">
+        <div class="ks-group-title">字幕 / 功能</div>
+        <div class="ks-group-body">
+          <div class="ks-row"><span class="ks-action">切换字幕轨道</span><div class="ks-keys"><span class="kbd">T</span></div></div>
+          <div class="ks-row"><span class="ks-action">字幕开关</span><div class="ks-keys"><span class="kbd">⌘</span><span class="kbd">T</span></div></div>
+          <div class="ks-row"><span class="ks-action">切换音轨</span><div class="ks-keys"><span class="kbd">⇧</span><span class="kbd">T</span></div></div>
+          <div class="ks-row"><span class="ks-action">截图</span><div class="ks-keys"><span class="kbd">S</span></div></div>
+          <div class="ks-row"><span class="ks-action">画质增强</span><div class="ks-keys"><span class="kbd">⌘</span><span class="kbd">E</span></div></div>
+          <div class="ks-row"><span class="ks-action">画中画</span><div class="ks-keys"><span class="kbd">P</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 字幕编辑上下文 -->
+    <div class="cs-body" id="ctx-subtitle" style="display:none">
+      <div class="ks-group">
+        <div class="ks-group-title">时间偏移</div>
+        <div class="ks-group-body">
+          <div class="ks-row"><span class="ks-action">全体 −50ms</span><div class="ks-keys"><span class="kbd">⌘</span><span class="kbd">[</span></div></div>
+          <div class="ks-row"><span class="ks-action">全体 +50ms</span><div class="ks-keys"><span class="kbd">⌘</span><span class="kbd">]</span></div></div>
+          <div class="ks-row"><span class="ks-action">全体 −500ms</span><div class="ks-keys"><span class="kbd">⌘</span><span class="kbd">⇧</span><span class="kbd">[</span></div></div>
+          <div class="ks-row"><span class="ks-action">全体 +500ms</span><div class="ks-keys"><span class="kbd">⌘</span><span class="kbd">⇧</span><span class="kbd">]</span></div></div>
+          <div class="ks-row"><span class="ks-action">帧率拉伸</span><div class="ks-keys"><span class="kbd">⌘</span><span class="kbd">⌥</span><span class="kbd">S</span></div></div>
+        </div>
+      </div>
+
+      <div class="ks-group">
+        <div class="ks-group-title">条目编辑</div>
+        <div class="ks-group-body">
+          <div class="ks-row"><span class="ks-action">拆分当前条</span><div class="ks-keys"><span class="kbd">⌘</span><span class="kbd">⇧</span><span class="kbd">K</span></div></div>
+          <div class="ks-row"><span class="ks-action">与下一条合并</span><div class="ks-keys"><span class="kbd">⌘</span><span class="kbd">⇧</span><span class="kbd">J</span></div></div>
+          <div class="ks-row"><span class="ks-action">插入新条</span><div class="ks-keys"><span class="kbd">⌘</span><span class="kbd">↩</span></div></div>
+          <div class="ks-row"><span class="ks-action">删除当前条</span><div class="ks-keys"><span class="kbd">⌘</span><span class="kbd">⌫</span></div></div>
+        </div>
+      </div>
+
+      <div class="ks-group">
+        <div class="ks-group-title">播放 / 导航</div>
+        <div class="ks-group-body">
+          <div class="ks-row"><span class="ks-action">播放 / 暂停</span><div class="ks-keys"><span class="kbd accent">Space</span></div></div>
+          <div class="ks-row"><span class="ks-action">上一条字幕</span><div class="ks-keys"><span class="kbd">⌥</span><span class="kbd">↑</span></div></div>
+          <div class="ks-row"><span class="ks-action">下一条字幕</span><div class="ks-keys"><span class="kbd">⌥</span><span class="kbd">↓</span></div></div>
+          <div class="ks-row"><span class="ks-action">跳到当前条时间点</span><div class="ks-keys"><span class="kbd">↩</span></div></div>
+        </div>
+      </div>
+
+      <div class="ks-group">
+        <div class="ks-group-title">AI 功能</div>
+        <div class="ks-group-body">
+          <div class="ks-row"><span class="ks-action">AI 修订（纠错/润色）</span><div class="ks-keys"><span class="kbd">⌘</span><span class="kbd">⌥</span><span class="kbd">A</span></div></div>
+          <div class="ks-row"><span class="ks-action">翻译选中条</span><div class="ks-keys"><span class="kbd">⌘</span><span class="kbd">⇧</span><span class="kbd">T</span></div></div>
+          <div class="ks-row"><span class="ks-action">保存</span><div class="ks-keys"><span class="kbd">⌘</span><span class="kbd">S</span></div></div>
+          <div class="ks-row"><span class="ks-action">撤销</span><div class="ks-keys"><span class="kbd">⌘</span><span class="kbd">Z</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 底部 -->
+    <div class="cs-footer">
+      <span>上下文：切换顶部 Tab 查看不同场景</span>
+      <span style="margin-left:auto">
+        <span class="kbd">⌘</span><span class="kbd">/</span> 关闭
+      </span>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+function setContext(ctx, btn) {
+  document.querySelectorAll('.ctx-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  ['library','player','subtitle'].forEach(c => {
+    const el = document.getElementById('ctx-' + c);
+    if (el) el.style.display = c === ctx ? 'grid' : 'none';
+  });
+  // 清空搜索
+  document.getElementById('ksSearch').value = '';
+  document.querySelectorAll('.ks-row').forEach(r => r.classList.remove('hidden'));
+}
+
+function filterKeys(q) {
+  const lower = q.toLowerCase();
+  // 只对当前可见的 ctx 操作
+  const activeCtx = document.querySelector('.cs-body:not([style*="none"])');
+  if (!activeCtx) return;
+  activeCtx.querySelectorAll('.ks-row').forEach(row => {
+    const action = row.querySelector('.ks-action')?.textContent.toLowerCase() || '';
+    const keys = row.querySelector('.ks-keys')?.textContent.toLowerCase() || '';
+    const match = !q || action.includes(lower) || keys.includes(lower);
+    row.classList.toggle('hidden', !match);
+    row.classList.toggle('highlight', !!q && match);
+  });
+}
+
+// ESC 关闭
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { /* 关闭逻辑 */ }
+});
+</script>
+</body>
+</html>

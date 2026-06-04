@@ -129,10 +129,42 @@
     transition: color 0.15s;
   }
   .detail-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-  .meta-row { display:flex; justify-content:space-between; padding: 5px 0; font-size: 13px; border-bottom: 0.5px solid var(--border-default); }
-  .meta-row:last-child { border-bottom: none; }
-  .meta-key { color: var(--text-secondary); }
-  .meta-val { color: var(--text-primary); font-weight: 500; }
+  /* 空态 / 加载 / 错误 */
+  .state-view {
+    display: none; flex: 1;
+    align-items: center; justify-content: center; flex-direction: column;
+    gap: var(--sp-md);
+  }
+  .state-view.active { display: flex; }
+  .state-icon { font-size: 56px; opacity: 0.4; }
+  .state-title { font-size: 17px; font-weight: 500; color: var(--text-primary); }
+  .state-desc  { font-size: 14px; color: var(--text-secondary); text-align: center; max-width: 320px; line-height: 1.5; }
+  /* 扫描进度条 */
+  .scan-progress {
+    width: 280px;
+    background: var(--surface-secondary);
+    border-radius: var(--r-full); height: 4px; overflow: hidden; margin-top: var(--sp-xs);
+  }
+  .scan-fill {
+    height: 100%; background: var(--accent); border-radius: var(--r-full);
+    animation: scan-anim 2.4s ease-in-out infinite;
+  }
+  @keyframes scan-anim {
+    0%   { width: 0%;   margin-left: 0; }
+    50%  { width: 60%;  margin-left: 0; }
+    100% { width: 0%;   margin-left: 100%; }
+  }
+  /* 状态切换按钮组（放工具栏） */
+  .state-seg {
+    display: flex; background: var(--surface-secondary);
+    border-radius: var(--r-md); padding: 2px; gap: 2px;
+  }
+  .state-seg-btn {
+    padding: 3px 10px; border-radius: 6px; border: none;
+    background: transparent; color: var(--text-tertiary);
+    font-size: 11px; cursor: pointer; transition: var(--anim-quick);
+  }
+  .state-seg-btn.active { background: var(--surface-elevated); color: var(--text-primary); }
 </style>
 </head>
 <body>
@@ -162,6 +194,13 @@
     <div class="toolbar-right">
       <button class="btn-icon" title="详情面板">⊟</button>
       <button class="btn-icon" title="添加文件夹">📁+</button>
+      <!-- 状态演示切换（仅用于视觉稿展示，生产中不存在此控件） -->
+      <div class="state-seg" title="演示用：切换内容区状态">
+        <button class="state-seg-btn active" onclick="setContentState('normal',this)">正常</button>
+        <button class="state-seg-btn" onclick="setContentState('empty',this)">空态</button>
+        <button class="state-seg-btn" onclick="setContentState('scanning',this)">扫描中</button>
+        <button class="state-seg-btn" onclick="setContentState('error',this)">错误</button>
+      </div>
     </div>
   </div>
 
@@ -200,8 +239,9 @@
     </div>
 
     <!-- 内容区 -->
-    <div class="content">
-      <div class="grid-view" id="contentArea">
+    <div class="content" id="mainContent">
+      <!-- 正常：海报网格 -->
+      <div class="grid-view active" id="state-normal">
         <!-- 海报卡 × 12 -->
         <script>
           const items=[
@@ -233,8 +273,46 @@
             </div>
           `).join(''));
         </script>
+      </div><!-- /state-normal -->
+
+      <!-- 空态：首次打开，无视频 -->
+      <div class="state-view" id="state-empty">
+        <div class="state-icon">📂</div>
+        <div class="state-title">还没有视频</div>
+        <div class="state-desc">把视频文件夹拖进来，或者点击下方按钮添加监视目录，HiVideo 会自动扫描并整理你的收藏。</div>
+        <div style="display:flex;gap:var(--sp-sm);margin-top:var(--sp-xs)">
+          <button class="btn btn-primary">添加文件夹</button>
+          <button class="btn btn-secondary">⌘O 打开文件</button>
+        </div>
       </div>
-    </div>
+
+      <!-- 扫描中：后台扫描转圈 -->
+      <div class="state-view" id="state-scanning">
+        <div class="state-icon" style="animation:spin 2s linear infinite;display:inline-block">⏳</div>
+        <div class="state-title">正在扫描媒体库</div>
+        <div class="state-desc">正在读取 /Volumes/NAS/影视，已找到 <strong>248</strong> 个视频文件，请稍候…</div>
+        <div class="scan-progress"><div class="scan-fill"></div></div>
+        <div style="font-size:12px;color:var(--text-tertiary);margin-top:var(--sp-xs)">扫描速度：~120 文件/秒 · 可在后台继续使用</div>
+        <button class="btn btn-secondary btn-sm" style="margin-top:var(--sp-xs)">在后台继续</button>
+      </div>
+
+      <!-- 错误态：扫描/连接出错 -->
+      <div class="state-view" id="state-error">
+        <div class="state-icon" style="opacity:1">⚠️</div>
+        <div class="state-title">无法访问媒体库</div>
+        <div class="state-desc">无法连接到 <code style="background:var(--surface-secondary);padding:1px 6px;border-radius:4px;font-size:12px">/Volumes/NAS/影视</code>，网络不可用或挂载点已断开。</div>
+        <div style="background:var(--surface-secondary);border:0.5px solid var(--border-default);border-radius:var(--r-md);padding:var(--sp-sm) var(--sp-md);font-size:12px;color:var(--text-secondary);max-width:360px;text-align:left;margin-top:var(--sp-xs)">
+          <div style="color:var(--functional-error);margin-bottom:4px">✕ 错误详情</div>
+          <div>SMBv3: Connection refused (errno 61)</div>
+          <div style="color:var(--text-tertiary);margin-top:2px">上次成功连接：2 小时前</div>
+        </div>
+        <div style="display:flex;gap:var(--sp-sm);margin-top:var(--sp-sm)">
+          <button class="btn btn-primary">重新连接</button>
+          <button class="btn btn-secondary">诊断网络</button>
+          <button class="btn btn-ghost">仅显示本地视频</button>
+        </div>
+      </div>
+    </div><!-- /content -->
 
     <!-- 详情面板 -->
     <div class="detail-panel">
@@ -271,6 +349,20 @@ function setView(v,btn) {
 function setTab(tab) {
   document.querySelectorAll('.detail-tab').forEach(t=>t.classList.remove('active'));
   tab.classList.add('active');
+}
+function setContentState(state, btn) {
+  document.querySelectorAll('.state-seg-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  // 切换内容区域
+  const normal = document.getElementById('state-normal');
+  const empty  = document.getElementById('state-empty');
+  const scan   = document.getElementById('state-scanning');
+  const err    = document.getElementById('state-error');
+  // grid-view 默认 display:grid，state-view 默认 display:none
+  normal.style.display = state === 'normal'   ? 'grid' : 'none';
+  empty.classList.toggle('active',  state === 'empty');
+  scan.classList.toggle('active',   state === 'scanning');
+  err.classList.toggle('active',    state === 'error');
 }
 </script>
 </body>
