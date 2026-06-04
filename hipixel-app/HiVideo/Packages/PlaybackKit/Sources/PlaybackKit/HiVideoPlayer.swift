@@ -1,10 +1,5 @@
 // HiVideoPlayer.swift — PlaybackKit
-// 播放器实现：AVPlayer + AVPlayerLayer（系统级硬解，支持 MKV H.264/H.265）
-//
-// Phase 1 策略：
-//   使用 AVPlayer + AVPlayerLayer 渲染，系统处理所有格式的解码和渲染
-//   包括 MKV（通过系统 codec 支持）、MP4、MOV 等
-//   Phase 2.5 Rust 迁移时替换为 Metal 渲染管道，Player 协议不变
+// AVPlayer + AVPlayerLayer 播放器
 
 import AVFoundation
 import Combine
@@ -43,13 +38,13 @@ public final class HiVideoPlayer: Player, ObservableObject {
         $currentTime.eraseToAnyPublisher()
     }
 
-    // MARK: - AVPlayer
+    // MARK: - AVPlayer (public for AVPlayerLayerView)
 
-    /// 外部通过此属性获取 AVPlayerLayer（供 PlayerVideoView 使用）
     public let avPlayer = AVPlayer()
 
     private var timeObserver: Any?
     private var statusObserver: NSKeyValueObservation?
+    private var rateObserver: NSKeyValueObservation?
     private var itemEndObserver: NSObjectProtocol?
     private var currentItem: AVPlayerItem?
 
@@ -61,84 +56,84 @@ public final class HiVideoPlayer: Player, ObservableObject {
     }
 
     deinit {
-        if let obs = timeObserver {
-            avPlayer.removeTimeObserver(obs)
-        }
+        if let obs = timeObserver { avPlayer.removeTimeObserver(obs) }
         itemEndObserver.map { NotificationCenter.default.removeObserver($0) }
     }
 
     // MARK: - Load
 
     public func load(_ url: URL) async {
+        print("[Player] load start: \(url.lastPathComponent)")
         status = .loading
 
-        // 停止当前播放
         avPlayer.pause()
         statusObserver?.invalidate()
+        rateObserver?.invalidate()
         itemEndObserver.map { NotificationCenter.default.removeObserver($0) }
 
-        let asset = AVURLAsset(url: url)
-        let item = AVPlayerItem(asset: asset)
+        let item = AVPlayerItem(url: url)   // 用 URL 直接初始化（更简单，系统自动选解码器）
         currentItem = item
         avPlayer.replaceCurrentItem(with: item)
+        print("[Player] replaceCurrentItem done, item.status=\(item.status.rawValue)")
 
-        // 观察 playerItem status
-        statusObserver = item.observe(\.status, options: [.new]) { [weak self] item, _ in
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                switch item.status {
-                case .readyToPlay:
-                    self.duration = item.duration
-                    self.videoSize = self.extractVideoSize(from: item)
-                    self.status = .ready
-                case .failed:
-                    let msg = item.error?.localizedDescription ?? "未知错误"
-                    self.status = .error(msg)
-                default:
-                    break
-                }
-            }
-        }
-
-        // 播放结束通知
+        // 观察播放完毕
         itemEndObserver = NotificationCenter.default.addObserver(
             forName: .AVPlayerItemDidPlayToEndTime,
-            object: item,
-            queue: .main
+            object: item, queue: .main
         ) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                self?.status = .ended
-            }
+            Task { @MainActor [weak self] in self?.status = .ended }
         }
 
-        // 等待就绪（最多 10 秒）
+        // 等待 readyToPlay（用 initial option 捕获已经就绪的状态）
         await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
-            var resolved = false
-            let obs = item.observe(\.status, options: [.new]) { item, _ in
-                guard !resolved else { return }
-                if item.status == .readyToPlay || item.status == .failed {
-                    resolved = true
-                    cont.resume()
+            var done = false
+
+            let finish = { @Sendable in
+                guard !done else { return }
+                done = true
+                cont.resume()
+            }
+
+            statusObserver = item.observe(\.status, options: [.initial, .new]) { [weak self] item, _ in
+                guard let self else { return }
+                Task { @MainActor in
+                    print("[Player] KVO status=\(item.status.rawValue) error=\(String(describing: item.error))")
+                    switch item.status {
+                    case .readyToPlay:
+                        self.duration  = item.duration
+                        self.videoSize = self.extractVideoSize(from: item)
+                        self.status    = .ready
+                        print("[Player] ✓ ready  dur=\(item.duration.seconds)s  size=\(self.videoSize)")
+                        finish()
+                    case .failed:
+                        let msg = item.error?.localizedDescription ?? "unknown"
+                        print("[Player] ✗ failed: \(msg)")
+                        self.status = .error(msg)
+                        finish()
+                    default:
+                        break
+                    }
                 }
             }
-            // 超时保护
+
+            // 15 秒超时
             Task {
-                try? await Task.sleep(nanoseconds: 10_000_000_000)
-                if !resolved {
-                    resolved = true
-                    obs.invalidate()
-                    cont.resume()
-                }
+                try? await Task.sleep(nanoseconds: 15_000_000_000)
+                print("[Player] ⚠ timeout  status=\(item.status.rawValue)")
+                finish()
             }
-            _ = obs // 持有引用直到 resume
         }
+        print("[Player] load end: status=\(status)")
     }
 
     // MARK: - Playback Control
 
     public func play() {
-        guard status == .ready || status == .paused else { return }
-        avPlayer.rate = rate
+        print("[Player] play()  status=\(status)  item=\(String(describing: avPlayer.currentItem?.status.rawValue))")
+        guard status == .ready || status == .paused else {
+            print("[Player] play() ignored – not ready/paused")
+            return
+        }
         avPlayer.play()
         status = .playing
     }
@@ -171,9 +166,7 @@ public final class HiVideoPlayer: Player, ObservableObject {
     }
 
     private func extractVideoSize(from item: AVPlayerItem) -> CGSize {
-        guard let track = item.asset.tracks(withMediaType: .video).first else {
-            return .zero
-        }
+        guard let track = item.asset.tracks(withMediaType: .video).first else { return .zero }
         let size = track.naturalSize.applying(track.preferredTransform)
         return CGSize(width: abs(size.width), height: abs(size.height))
     }
