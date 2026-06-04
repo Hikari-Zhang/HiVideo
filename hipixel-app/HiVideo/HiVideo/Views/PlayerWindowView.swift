@@ -4,8 +4,6 @@
 import SwiftUI
 import AVKit
 import PlaybackKit
-
-struct PlayerWindowView: View {
     @EnvironmentObject var player: HiVideoPlayer
     @EnvironmentObject var playerState: PlayerStateObject
 
@@ -89,39 +87,22 @@ struct PlayerWindowView: View {
 
 // MARK: - AVPlayerLayer View (NSViewRepresentable)
 
+/// NSView that uses AVPlayerLayer as its backing layer.
+/// Key: wantsLayer must be set BEFORE super.init so makeBackingLayer() fires at the right time.
 struct AVPlayerLayerView: NSViewRepresentable {
     let player: AVPlayer
 
-    func makeNSView(context: Context) -> PlayerNSView {
-        let view = PlayerNSView(player: player)
-        return view
+    func makeNSView(context: Context) -> AVKit.AVPlayerView {
+        let v = AVKit.AVPlayerView()
+        v.player = player
+        v.controlsStyle = .none      // 我们用自定义控制条
+        v.videoGravity   = .resizeAspect
+        return v
     }
 
-    func updateNSView(_ nsView: PlayerNSView, context: Context) {
-        // AVPlayer 引用不变，无需更新
-    }
-
-    // NSView whose backing layer IS the AVPlayerLayer directly
-    final class PlayerNSView: NSView {
-        private let avPlayerLayer: AVPlayerLayer
-
-        init(player: AVPlayer) {
-            self.avPlayerLayer = AVPlayerLayer(player: player)
-            self.avPlayerLayer.videoGravity = .resizeAspect
-            self.avPlayerLayer.backgroundColor = CGColor.black
-            super.init(frame: .zero)
-            wantsLayer = true
-        }
-        required init?(coder: NSCoder) { fatalError() }
-
-        // Override makeBackingLayer so the view's own layer IS the AVPlayerLayer
-        override func makeBackingLayer() -> CALayer {
-            return avPlayerLayer
-        }
-
-        override func layout() {
-            super.layout()
-            avPlayerLayer.frame = bounds
+    func updateNSView(_ nsView: AVKit.AVPlayerView, context: Context) {
+        if nsView.player !== player {
+            nsView.player = player
         }
     }
 }
