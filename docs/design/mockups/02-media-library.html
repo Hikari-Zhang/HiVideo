@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>HiVideo · 媒体库</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  .window {
+    display: flex; flex-direction: column;
+    height: calc(100vh - 40px);
+    background: var(--surface-background);
+  }
+  /* 工具栏 */
+  .toolbar {
+    height: var(--toolbar-height);
+    display: flex; align-items: center;
+    padding: 0 var(--sp-md); gap: var(--sp-md);
+    border-bottom: 0.5px solid var(--border-default);
+    background: rgba(28,28,30,0.8);
+    backdrop-filter: blur(20px);
+    flex-shrink: 0;
+  }
+  .toolbar-left  { display:flex;align-items:center;gap:var(--sp-sm); }
+  .toolbar-mid   { flex:1;display:flex;justify-content:center; }
+  .toolbar-right { display:flex;align-items:center;gap:var(--sp-sm); }
+  .search-box {
+    display: flex; align-items: center; gap: var(--sp-xs);
+    background: var(--surface-secondary);
+    border: 0.5px solid var(--border-default);
+    border-radius: var(--r-md); padding: 6px var(--sp-sm);
+    width: 280px; cursor: text;
+  }
+  .search-box input {
+    background: transparent; border: none; color: var(--text-primary);
+    font-size: 14px; outline: none; width: 100%;
+  }
+  .search-box input::placeholder { color: var(--text-tertiary); }
+  .seg-ctrl {
+    display: flex; background: var(--surface-secondary);
+    border-radius: var(--r-md); padding: 2px; gap: 2px;
+  }
+  .seg-btn {
+    padding: 4px 10px; border-radius: 6px; border: none;
+    background: transparent; color: var(--text-secondary);
+    font-size: 13px; cursor: pointer; transition: var(--anim-quick);
+  }
+  .seg-btn.active { background: var(--surface-elevated); color: var(--text-primary); }
+  /* 主体三栏 */
+  .main-area { display:flex; flex:1; overflow:hidden; }
+  /* 侧边栏 */
+  .sidebar {
+    width: var(--sidebar-width); flex-shrink: 0;
+    background: rgba(28,28,30,0.6);
+    backdrop-filter: blur(20px);
+    border-right: 0.5px solid var(--border-default);
+    overflow-y: auto; padding: var(--sp-sm) 0;
+  }
+  .sidebar-group { margin-bottom: var(--sp-xs); }
+  .sidebar-group-title {
+    padding: var(--sp-xs) var(--sp-md) 4px;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--text-tertiary);
+  }
+  .sidebar-item {
+    display: flex; align-items: center; gap: var(--sp-xs);
+    padding: 5px var(--sp-md); cursor: pointer;
+    border-radius: var(--r-sm); margin: 0 var(--sp-xs);
+    transition: var(--anim-quick);
+    font-size: 14px; color: var(--text-secondary);
+  }
+  .sidebar-item:hover   { background: var(--state-hover); color: var(--text-primary); }
+  .sidebar-item.active  { background: var(--state-selected); color: var(--accent); }
+  .sidebar-item .icon   { width: 18px; text-align: center; font-size: 14px; }
+  .sidebar-item .badge  { margin-left: auto; }
+  /* 内容区 */
+  .content { flex:1; overflow-y:auto; padding: var(--sp-xl); }
+  /* 网格 */
+  .grid-view {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: var(--sp-md);
+  }
+  .poster-card { cursor: pointer; }
+  .poster-card:hover .poster-art { transform: scale(1.02); box-shadow: var(--shadow-md); }
+  .poster-art {
+    width: 100%; aspect-ratio: 2/3;
+    border-radius: var(--r-lg); overflow: hidden;
+    background: var(--surface-secondary);
+    border: 0.5px solid var(--border-default);
+    position: relative; transition: var(--anim-default);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 40px;
+  }
+  .poster-progress {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 4px;
+    background: rgba(255,255,255,0.15);
+  }
+  .poster-progress-fill {
+    height: 100%; background: var(--accent); border-radius: 0 0 2px 2px;
+  }
+  .poster-meta { padding: var(--sp-xs) 2px 0; }
+  .poster-title { font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .poster-sub   { font-size: 11px; color: var(--text-secondary); margin-top: 2px; display:flex;justify-content:space-between;align-items:center; }
+  /* 详情面板 */
+  .detail-panel {
+    width: var(--detail-panel-width); flex-shrink: 0;
+    border-left: 0.5px solid var(--border-default);
+    background: rgba(28,28,30,0.6);
+    backdrop-filter: blur(20px);
+    overflow-y: auto;
+    padding: var(--sp-xl) var(--sp-md);
+  }
+  .detail-poster {
+    width: 100%; aspect-ratio: 2/3;
+    border-radius: var(--r-lg);
+    background: var(--surface-secondary);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 56px; margin-bottom: var(--sp-md);
+    border: 0.5px solid var(--border-default);
+  }
+  .detail-tabs {
+    display: flex; border-bottom: 0.5px solid var(--border-default);
+    margin-bottom: var(--sp-md);
+  }
+  .detail-tab {
+    flex: 1; text-align: center; padding: var(--sp-xs) 0;
+    font-size: 13px; cursor: pointer; color: var(--text-secondary);
+    border-bottom: 2px solid transparent; margin-bottom: -0.5px;
+    transition: color 0.15s;
+  }
+  .detail-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .meta-row { display:flex; justify-content:space-between; padding: 5px 0; font-size: 13px; border-bottom: 0.5px solid var(--border-default); }
+  .meta-row:last-child { border-bottom: none; }
+  .meta-key { color: var(--text-secondary); }
+  .meta-val { color: var(--text-primary); font-weight: 500; }
+</style>
+</head>
+<body>
+<nav class="mockup-nav">
+  <a class="nav-home" href="index.html">Mockups</a>
+  <span class="separator">/</span>
+  <span class="current">02 · 媒体库</span>
+</nav>
+<div class="mockup-body">
+<div class="window">
+  <!-- 工具栏 -->
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <button class="btn-icon" title="侧边栏">☰</button>
+      <div class="seg-ctrl">
+        <button class="seg-btn active" onclick="setView('grid',this)">⊞</button>
+        <button class="seg-btn" onclick="setView('list',this)">≡</button>
+        <button class="seg-btn" onclick="setView('timeline',this)">⏱</button>
+      </div>
+    </div>
+    <div class="toolbar-mid">
+      <div class="search-box">
+        <span style="color:var(--text-tertiary);font-size:14px">🔍</span>
+        <input type="text" placeholder="搜索视频、角色、标签…">
+      </div>
+    </div>
+    <div class="toolbar-right">
+      <button class="btn-icon" title="详情面板">⊟</button>
+      <button class="btn-icon" title="添加文件夹">📁+</button>
+    </div>
+  </div>
+
+  <div class="main-area">
+    <!-- 侧边栏 -->
+    <div class="sidebar">
+      <div class="sidebar-group">
+        <div class="sidebar-group-title">媒体库</div>
+        <div class="sidebar-item"><span class="icon">⏱</span>最近<span class="badge badge-accent">3</span></div>
+        <div class="sidebar-item"><span class="icon">▶</span>在看<span class="badge badge-neutral">7</span></div>
+        <div class="sidebar-item active"><span class="icon">⊞</span>全部视频</div>
+      </div>
+      <div class="sidebar-group">
+        <div class="sidebar-group-title">AI 智能</div>
+        <div class="sidebar-item"><span class="icon">🎬</span>电影</div>
+        <div class="sidebar-item"><span class="icon">📺</span>剧集</div>
+        <div class="sidebar-item"><span class="icon">🎌</span>动漫</div>
+        <div class="sidebar-item"><span class="icon">📚</span>教程</div>
+      </div>
+      <div class="sidebar-group">
+        <div class="sidebar-group-title">角色</div>
+        <div class="sidebar-item">
+          <div style="width:20px;height:20px;border-radius:50%;background:var(--char-0);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;flex-shrink:0">T</div>
+          Tony Stark<span class="badge badge-neutral">12</span>
+        </div>
+        <div class="sidebar-item">
+          <div style="width:20px;height:20px;border-radius:50%;background:var(--char-1);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;flex-shrink:0">宫</div>
+          宫园薰<span class="badge badge-neutral">8</span>
+        </div>
+      </div>
+      <div class="sidebar-group">
+        <div class="sidebar-group-title">文件夹</div>
+        <div class="sidebar-item"><span class="icon">📂</span>/Movies <span class="dot dot-online" style="margin-left:auto"></span></div>
+        <div class="sidebar-item"><span class="icon">📡</span>NAS/影视 <span class="dot dot-online" style="margin-left:auto"></span></div>
+      </div>
+    </div>
+
+    <!-- 内容区 -->
+    <div class="content">
+      <div class="grid-view" id="contentArea">
+        <!-- 海报卡 × 12 -->
+        <script>
+          const items=[
+            {emoji:'🎌',title:'四月是你的谎言',sub:'2024 · 1080p',progress:35,variants:1},
+            {emoji:'🦸',title:'复仇者联盟 4',sub:'2019 · 4K HDR',progress:0,variants:3},
+            {emoji:'🎭',title:'老男孩',sub:'2003 · 1080p',progress:100,variants:2},
+            {emoji:'🌸',title:'鬼灭之刃',sub:'2019 · 1080p',progress:60,variants:1},
+            {emoji:'🚀',title:'星际穿越',sub:'2014 · 4K HDR',progress:0,variants:1},
+            {emoji:'🎪',title:'寄生虫',sub:'2019 · 1080p',progress:80,variants:1},
+            {emoji:'🔥',title:'进击的巨人',sub:'2013 · 1080p',progress:45,variants:1},
+            {emoji:'🌙',title:'千与千寻',sub:'2001 · 4K',progress:0,variants:1},
+            {emoji:'🎯',title:'肖申克的救赎',sub:'1994 · 1080p',progress:0,variants:2},
+            {emoji:'🌊',title:'你的名字',sub:'2016 · 1080p',progress:0,variants:1},
+            {emoji:'⚔️',title:'指环王',sub:'2001 · 4K HDR',progress:20,variants:1},
+            {emoji:'🎶',title:'海上钢琴师',sub:'1998 · 1080p',progress:0,variants:1},
+          ];
+          document.write(items.map(i=>`
+            <div class="poster-card">
+              <div class="poster-art">${i.emoji}
+                ${i.progress>0&&i.progress<100?`<div class="poster-progress"><div class="poster-progress-fill" style="width:${i.progress}%"></div></div>`:''}
+              </div>
+              <div class="poster-meta">
+                <div class="poster-title">${i.title}</div>
+                <div class="poster-sub">
+                  <span style="color:var(--text-secondary)">${i.sub}</span>
+                  ${i.variants>=2?`<span class="badge badge-accent">${i.variants}</span>`:''}
+                </div>
+              </div>
+            </div>
+          `).join(''));
+        </script>
+      </div>
+    </div>
+
+    <!-- 详情面板 -->
+    <div class="detail-panel">
+      <div class="detail-poster">🦸</div>
+      <div class="t-headline" style="margin-bottom:4px">复仇者联盟 4：终局之战</div>
+      <div class="t-footnote text-secondary" style="margin-bottom:var(--sp-md)">2019 · 3小时1分 · 4K HDR · Marvel</div>
+      <div class="detail-tabs">
+        <div class="detail-tab active" onclick="setTab(this)">简介</div>
+        <div class="detail-tab" onclick="setTab(this)">副本</div>
+        <div class="detail-tab" onclick="setTab(this)">摘要</div>
+        <div class="detail-tab" onclick="setTab(this)">章节</div>
+      </div>
+      <div id="tabContent">
+        <div style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:var(--sp-md)">
+          超级英雄们在灭霸将宇宙一半生命消灭五年后，试图逆转这一切，拯救幸存者的最终决战…
+        </div>
+        <div class="meta-row"><span class="meta-key">分辨率</span><span class="meta-val">3840×2160</span></div>
+        <div class="meta-row"><span class="meta-key">编码</span><span class="meta-val">H.265 HEVC</span></div>
+        <div class="meta-row"><span class="meta-key">帧率</span><span class="meta-val">23.976 fps</span></div>
+        <div class="meta-row"><span class="meta-key">音频</span><span class="meta-val">DTS-X 7.1</span></div>
+        <div class="meta-row"><span class="meta-key">字幕</span><span class="meta-val">中文/英文</span></div>
+        <div class="meta-row"><span class="meta-key">大小</span><span class="meta-val">52.3 GB</span></div>
+        <div class="meta-row"><span class="meta-key">副本</span><span class="meta-val" style="color:var(--accent)">3 个</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<script>
+function setView(v,btn) {
+  document.querySelectorAll('.seg-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+function setTab(tab) {
+  document.querySelectorAll('.detail-tab').forEach(t=>t.classList.remove('active'));
+  tab.classList.add('active');
+}
+</script>
+</body>
+</html>

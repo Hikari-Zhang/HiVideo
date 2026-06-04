@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HiVideo · Design Mockups</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  body { height: 100vh; overflow-y: auto; background: var(--surface-background); }
+  .header {
+    padding: var(--sp-xxxl) var(--sp-xxxl) var(--sp-xl);
+    border-bottom: 0.5px solid var(--border-default);
+  }
+  .logo { display: flex; align-items: center; gap: var(--sp-sm); margin-bottom: var(--sp-md); }
+  .logo-icon {
+    width: 48px; height: 48px; border-radius: 12px;
+    background: linear-gradient(135deg, #0A84FF, #BF5AF2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--sp-xl);
+    padding: var(--sp-xxl) var(--sp-xxxl);
+  }
+  .section-title {
+    padding: var(--sp-xl) var(--sp-xxxl) var(--sp-sm);
+    color: var(--text-tertiary);
+    font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .mockup-card {
+    display: block; text-decoration: none;
+    background: var(--surface-primary);
+    border: 0.5px solid var(--border-default);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    transition: var(--anim-default);
+  }
+  .mockup-card:hover {
+    border-color: var(--border-strong);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+  .thumb {
+    height: 160px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 48px;
+    position: relative; overflow: hidden;
+  }
+  .thumb-label {
+    position: absolute; bottom: var(--sp-xs); right: var(--sp-xs);
+    background: rgba(0,0,0,0.6);
+    color: var(--text-secondary); font-size: 10px;
+    padding: 2px 6px; border-radius: var(--r-sm);
+  }
+  .card-body { padding: var(--sp-md); }
+  .card-title { font-size: 15px; font-weight: 500; margin-bottom: 4px; }
+  .card-desc  { font-size: 12px; color: var(--text-secondary); }
+  .tag {
+    display: inline-block; margin-top: var(--sp-xs);
+    padding: 2px 8px; border-radius: var(--r-full);
+    font-size: 10px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .tag-p0 { background: rgba(255,69,58,0.15); color: #FF453A; }
+  .tag-p1 { background: rgba(255,159,10,0.15); color: #FF9F0A; }
+  .tag-p2 { background: rgba(48,209,88,0.15); color: #30D158; }
+  .tag-hipixel { background: rgba(139,92,246,0.15); color: #8B5CF6; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="logo">
+    <div class="logo-icon">▶</div>
+    <div>
+      <div class="t-title2">HiVideo · Design Mockups</div>
+      <div class="t-footnote text-secondary">Phase 0.5 UI/UX 视觉稿 — HTML 可交互版本</div>
+    </div>
+  </div>
+  <div class="t-footnote text-tertiary">
+    基于 <code style="background:var(--surface-secondary);padding:1px 6px;border-radius:4px">tokens.css</code> 构建 · 深色模式 · 所有数值与 SwiftUI Token 精确对应
+  </div>
+</div>
+
+<div class="section-title">HiVideo · 核心界面</div>
+<div class="grid">
+  <a class="mockup-card" href="01-launch.html">
+    <div class="thumb" style="background: radial-gradient(circle at 50% 40%, #252528, #0A0A0A);">
+      ▶
+      <span class="thumb-label">启动屏</span>
+    </div>
+    <div class="card-body">
+      <div class="card-title">启动屏</div>
+      <div class="card-desc">拖入提示 + 最近播放海报卡</div>
+      <span class="tag tag-p0">P0 · Phase 1</span>
+    </div>
+  </a>
+  <a class="mockup-card" href="02-media-library.html">
+    <div class="thumb" style="background: linear-gradient(135deg, #1C1C1E 60%, #252528);">
+      ⊞
+      <span class="thumb-label">媒体库</span>
+    </div>
+    <div class="card-body">
+      <div class="card-title">媒体库（主窗口）</div>
+      <div class="card-desc">三栏布局 · 网格 / 列表 / 时间线视图</div>
+      <span class="tag tag-p0">P0 · Phase 1</span>
+    </div>
+  </a>
+  <a class="mockup-card" href="03-player.html">
+    <div class="thumb" style="background: #000;">
+      ⏵
+      <span class="thumb-label">播放器</span>
+    </div>
+    <div class="card-body">
+      <div class="card-title">沉浸式播放器</div>
+      <div class="card-desc">控制条 · 进度条 · HDR 标识</div>
+      <span class="tag tag-p0">P0 · Phase 1</span>
+    </div>
+  </a>
+  <a class="mockup-card" href="04-command-palette.html">
+    <div class="thumb" style="background: var(--surface-background);">
+      ⌘
+      <span class="thumb-label">命令面板</span>
+    </div>
+    <div class="card-body">
+      <div class="card-title">⌘K 命令面板</div>
+      <div class="card-desc">搜索 · 分组结果 · 键盘导航</div>
+      <span class="tag tag-p0">P0 · Phase 1</span>
+    </div>
+  </a>
+</div>
+
+<div class="section-title">HiVideo · 角色系统 + 高频交互</div>
+<div class="grid">
+  <a class="mockup-card" href="05-character.html">
+    <div class="thumb" style="background: linear-gradient(135deg, rgba(191,90,242,0.2), var(--surface-background));">
+      👤
+      <span class="thumb-label">角色系统</span>
+    </div>
+    <div class="card-body">
+      <div class="card-title">角色系统</div>
+      <div class="card-desc">侧边栏 · 网格 · 详情页 · Metric 卡</div>
+      <span class="tag tag-p1">P1 · Phase 5</span>
+    </div>
+  </a>
+  <a class="mockup-card" href="06-variant-picker.html">
+    <div class="thumb" style="background: var(--surface-secondary); font-size: 36px;">
+      ⊗
+      <span class="thumb-label">副本选择</span>
+    </div>
+    <div class="card-body">
+      <div class="card-title">副本选择弹窗</div>
+      <div class="card-desc">多副本操作 · 状态行 · 操作策略</div>
+      <span class="tag tag-p1">P1 · Phase 7</span>
+    </div>
+  </a>
+  <a class="mockup-card" href="07-delete-toast.html">
+    <div class="thumb" style="background: var(--surface-background); font-size: 36px;">
+      🗑
+      <span class="thumb-label">删除安全网</span>
+    </div>
+    <div class="card-body">
+      <div class="card-title">删除安全网 Toast</div>
+      <div class="card-desc">5s 倒计时 · 撤销 · 二次确认</div>
+      <span class="tag tag-p0">P0 · Phase 1</span>
+    </div>
+  </a>
+  <a class="mockup-card" href="08-enhancement.html">
+    <div class="thumb" style="background: linear-gradient(135deg, rgba(255,214,0,0.1), var(--surface-background)); font-size: 36px;">
+      ✨
+      <span class="thumb-label">画质增强</span>
+    </div>
+    <div class="card-body">
+      <div class="card-title">画质增强浮窗</div>
+      <div class="card-desc">滤镜开关 · 强度 · GPU 性能仪表</div>
+      <span class="tag tag-p1">P1 · Phase 3</span>
+    </div>
+  </a>
+  <a class="mockup-card" href="09-audio.html">
+    <div class="thumb" style="background: var(--surface-background); font-size: 36px;">
+      🔊
+      <span class="thumb-label">音频增强</span>
+    </div>
+    <div class="card-body">
+      <div class="card-title">音频增强浮窗</div>
+      <div class="card-desc">响度归一化 · 深夜模式 · 电平表</div>
+      <span class="tag tag-p1">P1 · Phase 3</span>
+    </div>
+  </a>
+  <a class="mockup-card" href="10-node-settings.html">
+    <div class="thumb" style="background: var(--surface-background); font-size: 36px;">
+      🖥
+      <span class="thumb-label">算力节点</span>
+    </div>
+    <div class="card-body">
+      <div class="card-title">算力节点设置</div>
+      <div class="card-desc">节点卡片 · 自动发现 · GPU 监控</div>
+      <span class="tag tag-p1">P1 · Phase 8</span>
+    </div>
+  </a>
+  <a class="mockup-card" href="11-subtitle-editor.html">
+    <div class="thumb" style="background: var(--surface-background); font-size: 36px;">
+      💬
+      <span class="thumb-label">字幕编辑</span>
+    </div>
+    <div class="card-body">
+      <div class="card-title">字幕编辑器</div>
+      <div class="card-desc">三栏：列表 / 预览 / 波形时间轴</div>
+      <span class="tag tag-p2">P2 · Phase 6</span>
+    </div>
+  </a>
+</div>
+
+<div class="section-title">HiPixel · Web + Windows</div>
+<div class="grid">
+  <a class="mockup-card" href="12-hipixel-upload.html">
+    <div class="thumb" style="background: linear-gradient(135deg, rgba(139,92,246,0.2), #111827);">
+      ⬆
+      <span class="thumb-label">HiPixel Web</span>
+    </div>
+    <div class="card-body">
+      <div class="card-title">HiPixel · 上传屏</div>
+      <div class="card-desc">拖拽区 · 7 张预设大卡 · 上传 CTA</div>
+      <span class="tag tag-hipixel">HiPixel · Phase 2</span>
+    </div>
+  </a>
+  <a class="mockup-card" href="13-hipixel-queue.html">
+    <div class="thumb" style="background: linear-gradient(135deg, rgba(139,92,246,0.15), #111827); font-size: 36px;">
+      ⚙
+      <span class="thumb-label">任务队列</span>
+    </div>
+    <div class="card-body">
+      <div class="card-title">HiPixel · 任务队列</div>
+      <div class="card-desc">4 状态 Tab · 任务卡 · 进度条</div>
+      <span class="tag tag-hipixel">HiPixel · Phase 2</span>
+    </div>
+  </a>
+  <a class="mockup-card" href="14-hipixel-compare.html">
+    <div class="thumb" style="background: #111827; font-size: 36px; flex-direction: column; gap: 4px;">
+      <div style="display:flex;gap:4px;font-size:24px;">◧ ◨</div>
+      <span class="thumb-label">对比屏</span>
+    </div>
+    <div class="card-body">
+      <div class="card-title">HiPixel · 对比屏</div>
+      <div class="card-desc">前后对比分割线 · 关键帧报告</div>
+      <span class="tag tag-hipixel">HiPixel · Phase 2</span>
+    </div>
+  </a>
+  <a class="mockup-card" href="15-hipixel-windows.html">
+    <div class="thumb" style="background: linear-gradient(135deg, rgba(139,92,246,0.1), #1a1a2e); font-size: 36px;">
+      🪟
+      <span class="thumb-label">Windows</span>
+    </div>
+    <div class="card-body">
+      <div class="card-title">HiPixel Windows</div>
+      <div class="card-desc">安装向导 · 系统托盘菜单</div>
+      <span class="tag tag-hipixel">HiPixel · Phase 4</span>
+    </div>
+  </a>
+</div>
+
+<div style="height: var(--sp-xxxl);"></div>
+</body>
+</html>

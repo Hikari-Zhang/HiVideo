@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>HiPixel Windows · 安装向导 + 托盘</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  body { background: #0a0a12; overflow-y:auto; height:auto; }
+  .demo-wrap {
+    min-height: calc(100vh - 40px);
+    display:flex; gap:var(--sp-xxl); padding:var(--sp-xxl);
+    align-items:flex-start; justify-content:center;
+  }
+  /* Windows 安装向导 */
+  .installer-wrap { display:flex; flex-direction:column; align-items:center; }
+  .installer-label { font-size:12px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:var(--sp-sm); }
+  .installer {
+    width:520px; background:#1a1a2e;
+    border:1px solid rgba(139,92,246,0.3);
+    border-radius:var(--r-xl); box-shadow:0 8px 40px rgba(0,0,0,0.6);
+    overflow:hidden;
+  }
+  .win-titlebar {
+    height:32px; background:#111124; display:flex; align-items:center;
+    padding:0 var(--sp-sm); gap:6px;
+  }
+  .win-btn { width:12px;height:12px;border-radius:50; }
+  .win-btn.close  { background:#FF5F57; }
+  .win-btn.min    { background:#FFBD2E; }
+  .win-btn.max    { background:#28CA41; }
+  .win-title-text { flex:1; text-align:center; font-size:11px; color:var(--text-tertiary); }
+  /* 步骤指示器 */
+  .step-indicator {
+    padding:var(--sp-md) var(--sp-xl);
+    display:flex; align-items:center; gap:0;
+    border-bottom:1px solid rgba(255,255,255,0.08);
+  }
+  .step-item { display:flex; align-items:center; flex:1; }
+  .step-circle {
+    width:28px; height:28px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:13px; font-weight:700; flex-shrink:0;
+  }
+  .step-circle.done   { background:var(--functional-success); color:#000; }
+  .step-circle.active { background:var(--hipixel-primary); color:#fff; }
+  .step-circle.future { background:rgba(255,255,255,0.1); color:var(--text-tertiary); }
+  .step-line { flex:1; height:1px; background:rgba(255,255,255,0.1); }
+  .step-line.done { background:var(--functional-success); }
+  /* 步骤内容 */
+  .step-body { padding:var(--sp-xxl); }
+  .step-content { display:none; }
+  .step-content.active { display:block; }
+  .step-title { font-size:22px; font-weight:600; margin-bottom:var(--sp-xs); }
+  .step-desc  { font-size:14px; color:var(--text-secondary); margin-bottom:var(--sp-xl); }
+  /* GPU 检测 */
+  .detect-card {
+    background:rgba(139,92,246,0.08); border:1px solid rgba(139,92,246,0.3);
+    border-radius:var(--r-lg); padding:var(--sp-md); margin-bottom:var(--sp-md);
+  }
+  .detect-row { display:flex; justify-content:space-between; margin-bottom:4px; font-size:14px; }
+  /* 模型下载 */
+  .model-list { display:flex; flex-direction:column; gap:var(--sp-xs); }
+  .model-row { display:flex; align-items:center; gap:var(--sp-sm); font-size:14px; padding:var(--sp-xs) 0; }
+  .model-icon { width:20px; flex-shrink:0; }
+  .model-name { flex:1; }
+  .model-size { font-size:12px; color:var(--text-tertiary); width:60px; text-align:right; }
+  .model-progress { width:120px; }
+  /* 完成 */
+  .complete-icon { font-size:56px; text-align:center; margin-bottom:var(--sp-md); }
+  .checklist { display:flex; flex-direction:column; gap:var(--sp-xs); margin-bottom:var(--sp-xl); }
+  .check-item { display:flex; align-items:center; gap:var(--sp-xs); font-size:14px; color:var(--text-secondary); }
+  .check-item input { width:16px; height:16px; accent-color:var(--hipixel-primary); }
+  /* 底部按钮 */
+  .installer-footer {
+    padding:var(--sp-md) var(--sp-xl);
+    border-top:1px solid rgba(255,255,255,0.08);
+    display:flex; justify-content:flex-end; gap:var(--sp-sm);
+  }
+  .hp-btn-primary {
+    background:var(--hipixel-primary); color:#fff; border:none;
+    padding:8px var(--sp-xl); border-radius:var(--r-md);
+    font-size:14px; font-weight:500; cursor:pointer;
+    transition:background 0.15s;
+  }
+  .hp-btn-primary:hover { background:var(--hipixel-primary-hover); }
+
+  /* ── 托盘菜单 ── */
+  .tray-wrap { display:flex; flex-direction:column; align-items:center; gap:var(--sp-xl); }
+  .tray-label { font-size:12px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em; }
+  /* 托盘图标三态 */
+  .tray-icons { display:flex; gap:var(--sp-xl); align-items:flex-end; margin-bottom:var(--sp-sm); }
+  .tray-icon-wrap { display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .tray-icon { width:32px; height:32px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:18px; }
+  .tray-state { font-size:11px; color:var(--text-tertiary); }
+  /* 托盘菜单 */
+  .tray-menu {
+    width:240px; background:rgba(30,30,40,0.97);
+    backdrop-filter:blur(30px);
+    border:1px solid rgba(255,255,255,0.15);
+    border-radius:var(--r-lg); overflow:hidden;
+    box-shadow:0 8px 32px rgba(0,0,0,0.6);
+  }
+  .menu-head {
+    padding:var(--sp-sm) var(--sp-md);
+    border-bottom:1px solid rgba(255,255,255,0.08);
+    display:flex; align-items:center; gap:var(--sp-xs);
+  }
+  .menu-head-logo { font-size:14px; font-weight:700; color:var(--hipixel-primary); }
+  .menu-head-status { font-size:12px; color:var(--text-secondary); flex:1; display:flex; align-items:center; gap:4px; }
+  .menu-item {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:8px var(--sp-md); font-size:13px; cursor:pointer;
+    transition:background 0.1s;
+  }
+  .menu-item:hover { background:rgba(255,255,255,0.06); }
+  .menu-item-label { display:flex; align-items:center; gap:var(--sp-xs); }
+  .menu-icon { font-size:14px; width:18px; text-align:center; }
+  .menu-shortcut { font-size:11px; color:var(--text-tertiary); }
+  .menu-sep { height:0.5px; background:rgba(255,255,255,0.08); margin:3px 0; }
+  .menu-submenu { font-size:11px; color:var(--text-tertiary); }
+  /* GPU 监视浮窗 */
+  .gpu-float {
+    width:240px; background:rgba(25,25,38,0.97);
+    backdrop-filter:blur(20px);
+    border:1px solid rgba(139,92,246,0.3);
+    border-radius:var(--r-lg); padding:var(--sp-md);
+    box-shadow:0 6px 24px rgba(0,0,0,0.5);
+  }
+  .gpu-title { font-size:13px; font-weight:600; margin-bottom:var(--sp-sm); color:var(--hipixel-primary); }
+  .gpu-row { display:flex; align-items:center; gap:var(--sp-xs); margin-bottom:6px; }
+  .gpu-label { font-size:12px; color:var(--text-secondary); width:40px; flex-shrink:0; }
+  .gpu-bar { flex:1; height:4px; background:rgba(255,255,255,0.1); border-radius:var(--r-full); overflow:hidden; }
+  .gpu-fill { height:100%; border-radius:var(--r-full); }
+  .gpu-val { font-size:11px; color:var(--text-secondary); width:56px; text-align:right; font-variant-numeric:tabular-nums; flex-shrink:0; }
+</style>
+</head>
+<body>
+<nav class="mockup-nav">
+  <a class="nav-home" href="index.html">Mockups</a>
+  <span class="separator">/</span>
+  <span class="current">15 · HiPixel Windows</span>
+</nav>
+<div class="mockup-body" style="overflow:auto">
+<div class="demo-wrap">
+
+  <!-- 安装向导 -->
+  <div class="installer-wrap">
+    <div class="installer-label">Windows 安装向导</div>
+    <div class="installer">
+      <div class="win-titlebar">
+        <div class="win-btn close"></div>
+        <div class="win-btn min"></div>
+        <div class="win-btn max"></div>
+        <span class="win-title-text">HiPixel 安装程序</span>
+      </div>
+
+      <!-- 步骤指示器 -->
+      <div class="step-indicator">
+        <div class="step-item">
+          <div class="step-circle done">✓</div>
+          <div class="step-line done"></div>
+        </div>
+        <div class="step-item">
+          <div class="step-circle done">✓</div>
+          <div class="step-line done"></div>
+        </div>
+        <div class="step-item">
+          <div class="step-circle active">3</div>
+          <div class="step-line"></div>
+        </div>
+        <div class="step-item" style="flex:0">
+          <div class="step-circle future">4</div>
+        </div>
+      </div>
+
+      <div class="step-body">
+        <!-- Step 1 欢迎 -->
+        <div class="step-content" id="s1">
+          <div style="text-align:center;margin-bottom:var(--sp-xl)">
+            <div style="font-size:56px;margin-bottom:var(--sp-md)">⚡</div>
+            <div class="step-title">欢迎使用 HiPixel</div>
+            <div class="step-desc">在 Windows 设备上运行 AI 视频增强，<br>处理来自 HiVideo 或 Web 的任务</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.04);border-radius:var(--r-md);padding:var(--sp-md);font-size:13px;color:var(--text-secondary)">
+            <div style="margin-bottom:6px">✓ 支持 NVIDIA / AMD / Intel Arc GPU</div>
+            <div style="margin-bottom:6px">✓ 本地处理，隐私安全</div>
+            <div>✓ 自动识别 GPU，无需手动配置</div>
+          </div>
+        </div>
+
+        <!-- Step 2 GPU 检测 -->
+        <div class="step-content" id="s2">
+          <div class="step-title">检测 GPU</div>
+          <div class="step-desc">Step 2 / 4</div>
+          <div class="detect-card">
+            <div class="detect-row"><span>显卡</span><span style="font-weight:600">NVIDIA GeForce RTX 4070 Ti</span></div>
+            <div class="detect-row"><span>VRAM</span><span style="font-weight:600">12 GB GDDR6X</span></div>
+            <div class="detect-row"><span>推荐后端</span><span style="color:var(--hipixel-primary);font-weight:600">TensorRT FP16</span></div>
+            <div class="detect-row"><span>驱动</span><span style="color:var(--functional-success)">✓ 551.23（最新）</span></div>
+            <div class="detect-row"><span>可用预设</span><span style="color:var(--functional-success)">全部</span></div>
+          </div>
+        </div>
+
+        <!-- Step 3 模型下载（当前） -->
+        <div class="step-content active" id="s3">
+          <div class="step-title">下载 AI 模型</div>
+          <div class="step-desc">Step 3 / 4 · 共 312 MB</div>
+          <div class="model-list">
+            <div class="model-row"><span class="model-icon">✓</span><span class="model-name">CAS（锐化）</span><span class="model-size">0.1 MB</span><span style="font-size:12px;color:var(--functional-success)">完成</span></div>
+            <div class="model-row"><span class="model-icon">✓</span><span class="model-name">ACES（色调）</span><span class="model-size">0.1 MB</span><span style="font-size:12px;color:var(--functional-success)">完成</span></div>
+            <div class="model-row">
+              <span class="model-icon">⚙</span><span class="model-name">Real-ESRGAN</span><span class="model-size">245 MB</span>
+              <div class="model-progress">
+                <div class="progress-bar-hp" style="height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden">
+                  <div id="dlProgress" class="progress-fill-hp" style="width:63%;background:var(--hipixel-primary)"></div>
+                </div>
+                <div style="font-size:10px;color:var(--text-tertiary);text-align:right;margin-top:2px">63%</div>
+              </div>
+            </div>
+            <div class="model-row" style="opacity:0.5"><span class="model-icon">○</span><span class="model-name">NAFNet</span><span class="model-size">67 MB</span><span style="font-size:12px;color:var(--text-tertiary)">等待中</span></div>
+          </div>
+          <div style="margin-top:var(--sp-md);font-size:13px;color:var(--text-secondary)">
+            已下载：153 / 312 MB · 速度：8.2 MB/s · 剩余约 19 秒
+          </div>
+        </div>
+
+        <!-- Step 4 完成 -->
+        <div class="step-content" id="s4">
+          <div class="complete-icon">✅</div>
+          <div style="text-align:center;margin-bottom:var(--sp-xl)">
+            <div class="step-title">安装完成！</div>
+            <div class="step-desc">HiPixel 已在后台启动，通过系统托盘图标管理</div>
+          </div>
+          <div class="checklist">
+            <label class="check-item"><input type="checkbox" checked>开机自启动</label>
+            <label class="check-item"><input type="checkbox" checked>最小化到托盘</label>
+            <label class="check-item"><input type="checkbox">自动接受来自 HiVideo 的任务</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="installer-footer">
+        <button class="btn btn-secondary" id="backBtn" onclick="prevStep()" style="display:none">← 返回</button>
+        <button class="hp-btn-primary" id="nextBtn" onclick="nextInstallStep()">下一步 →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 托盘菜单 -->
+  <div class="tray-wrap">
+    <div class="tray-label">系统托盘</div>
+    <!-- 三态图标 -->
+    <div class="tray-icons">
+      <div class="tray-icon-wrap">
+        <div class="tray-icon" style="background:rgba(48,209,88,0.2);border:1px solid rgba(48,209,88,0.4)">⚡</div>
+        <div class="tray-state" style="color:var(--functional-success)">空闲</div>
+      </div>
+      <div class="tray-icon-wrap">
+        <div class="tray-icon" style="background:rgba(255,159,10,0.2);border:1px solid rgba(255,159,10,0.4);animation:pulse 1.5s infinite">⚡</div>
+        <div class="tray-state" style="color:var(--functional-warning)">处理中</div>
+      </div>
+      <div class="tray-icon-wrap">
+        <div class="tray-icon" style="background:rgba(255,69,58,0.2);border:1px solid rgba(255,69,58,0.4)">⚡</div>
+        <div class="tray-state" style="color:var(--functional-error)">错误</div>
+      </div>
+    </div>
+
+    <!-- 托盘右键菜单 -->
+    <div class="tray-menu">
+      <div class="menu-head">
+        <div class="menu-head-logo">⚡ HiPixel</div>
+        <div class="menu-head-status"><div class="dot dot-busy"></div>处理中 · 1 个任务</div>
+      </div>
+      <div class="menu-item"><div class="menu-item-label"><span class="menu-icon">🌐</span>打开 Web UI</div><span class="menu-shortcut">⌘⇧H</span></div>
+      <div class="menu-sep"></div>
+      <div class="menu-item"><div class="menu-item-label"><span class="menu-icon">⏸</span>暂停接收任务</div></div>
+      <div class="menu-sep"></div>
+      <div class="menu-item">
+        <div class="menu-item-label"><span class="menu-icon">📋</span>队列</div>
+        <span class="menu-submenu">1处理中 · 2排队 ›</span>
+      </div>
+      <div class="menu-item"><div class="menu-item-label"><span class="menu-icon">📊</span>GPU 监视</div><span class="menu-submenu">RTX 4070 Ti ›</span></div>
+      <div class="menu-sep"></div>
+      <div class="menu-item"><div class="menu-item-label"><span class="menu-icon">⚙</span>设置…</div></div>
+      <div class="menu-sep"></div>
+      <div class="menu-item" style="color:var(--text-destructive)"><div class="menu-item-label"><span class="menu-icon">✕</span>退出 HiPixel</div></div>
+    </div>
+
+    <!-- GPU 监视浮窗 -->
+    <div class="gpu-float">
+      <div class="gpu-title">📊 NVIDIA RTX 4070 Ti</div>
+      <div class="gpu-row"><span class="gpu-label">GPU</span><div class="gpu-bar"><div class="gpu-fill" style="width:79%;background:var(--accent)"></div></div><span class="gpu-val">79%</span></div>
+      <div class="gpu-row"><span class="gpu-label">显存</span><div class="gpu-bar"><div class="gpu-fill" style="width:67%;background:var(--hipixel-primary)"></div></div><span class="gpu-val">8.1/12 GB</span></div>
+      <div class="gpu-row"><span class="gpu-label">温度</span><div class="gpu-bar"><div class="gpu-fill" style="width:51%;background:var(--functional-success)"></div></div><span class="gpu-val">68°C</span></div>
+      <div class="gpu-row"><span class="gpu-label">功耗</span><div class="gpu-bar"><div class="gpu-fill" style="width:82%;background:var(--functional-warning)"></div></div><span class="gpu-val">165/200W</span></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+let installStep = 3;
+function nextInstallStep() {
+  const steps = [1,2,3,4];
+  document.getElementById('s'+installStep).classList.remove('active');
+  installStep = Math.min(installStep+1, 4);
+  document.getElementById('s'+installStep).classList.add('active');
+  document.getElementById('backBtn').style.display = installStep > 1 ? '' : 'none';
+  const btn = document.getElementById('nextBtn');
+  if (installStep === 4) { btn.textContent = '打开 Web UI'; }
+  else { btn.textContent = '下一步 →'; }
+  // Update dots
+  document.querySelectorAll('.step-circle').forEach((c,i)=>{
+    if(i < installStep-1) { c.className='step-circle done'; c.textContent='✓'; }
+    else if(i === installStep-1) { c.className='step-circle active'; c.textContent=i+1; }
+    else { c.className='step-circle future'; c.textContent=i+1; }
+  });
+}
+function prevStep() {
+  document.getElementById('s'+installStep).classList.remove('active');
+  installStep = Math.max(installStep-1, 1);
+  document.getElementById('s'+installStep).classList.add('active');
+  document.getElementById('backBtn').style.display = installStep > 1 ? '' : 'none';
+  document.getElementById('nextBtn').textContent = '下一步 →';
+}
+// 下载进度动画
+let dlPct = 63;
+setInterval(()=>{
+  if(dlPct < 100) {
+    dlPct = Math.min(dlPct + 0.5, 100);
+    const el = document.getElementById('dlProgress');
+    if(el) el.style.width = dlPct+'%';
+  }
+}, 200);
+</script>
+</body>
+</html>

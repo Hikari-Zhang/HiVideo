@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>HiPixel · 对比屏</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  body { background: #0a0a0f; overflow: hidden; }
+  .page { display:flex; flex-direction:column; height:calc(100vh - 40px); }
+  .compare-nav {
+    height: 52px; display:flex; align-items:center; padding:0 var(--sp-xl); gap:var(--sp-md);
+    border-bottom:1px solid rgba(139,92,246,0.2);
+    background:rgba(10,10,15,0.9); backdrop-filter:blur(20px); flex-shrink:0;
+  }
+  .compare-main { flex:1; display:flex; overflow:hidden; }
+  /* 视频区 */
+  .compare-video { flex:1; position:relative; overflow:hidden; cursor:col-resize; }
+  .video-half {
+    position:absolute; top:0; bottom:0; overflow:hidden;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .video-left  { left:0; }
+  .video-right { right:0; }
+  .video-content {
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center; font-size:80px;
+  }
+  .before-bg { background:linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); filter:grayscale(0.6) contrast(0.8); }
+  .after-bg  { background:linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); }
+  /* 水印 */
+  .video-watermark {
+    position:absolute; top:var(--sp-md); font-size:12px; font-weight:600;
+    padding:3px 10px; border-radius:var(--r-full);
+    backdrop-filter:blur(8px);
+  }
+  .wm-before { left:var(--sp-md); background:rgba(0,0,0,0.5); color:rgba(255,255,255,0.6); }
+  .wm-after  { right:var(--sp-md); background:rgba(139,92,246,0.3); color:var(--hipixel-primary); border:1px solid rgba(139,92,246,0.5); }
+  /* 分割线 */
+  .divider {
+    position:absolute; top:0; bottom:0; width:3px;
+    background:linear-gradient(to bottom, transparent, var(--hipixel-primary), transparent);
+    cursor:col-resize; z-index:20; transform:translateX(-50%);
+  }
+  .divider-handle {
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    width:32px; height:32px; border-radius:50%;
+    background:var(--hipixel-primary); border:3px solid rgba(255,255,255,0.9);
+    box-shadow:0 2px 12px rgba(139,92,246,0.6);
+    display:flex; align-items:center; justify-content:center; font-size:14px; color:#fff;
+  }
+  /* 进度条 */
+  .compare-scrubber {
+    height: 48px; padding:0 var(--sp-xl);
+    display:flex; align-items:center; gap:var(--sp-md);
+    border-top:1px solid rgba(255,255,255,0.08); flex-shrink:0;
+    background:rgba(10,10,15,0.8);
+  }
+  /* 关键帧报告侧栏 */
+  .keyframe-panel {
+    width:280px; flex-shrink:0;
+    border-left:1px solid rgba(139,92,246,0.2);
+    background:rgba(17,24,39,0.95); overflow-y:auto;
+  }
+  .kf-header { padding:var(--sp-md); border-bottom:1px solid var(--hipixel-border); font-size:14px; font-weight:600; }
+  .kf-item { padding:var(--sp-sm); border-bottom:1px solid var(--hipixel-border); cursor:pointer; transition:background 0.1s; }
+  .kf-item:hover { background:rgba(139,92,246,0.05); }
+  .kf-thumb { width:100%; aspect-ratio:16/9; border-radius:var(--r-sm); background:rgba(255,255,255,0.05); display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:var(--sp-xs); }
+  .kf-time  { font-size:11px; color:var(--text-tertiary); font-variant-numeric:tabular-nums; margin-bottom:4px; }
+  .kf-tags  { display:flex; gap:4px; flex-wrap:wrap; }
+  .kf-tag   { font-size:10px; padding:1px 6px; border-radius:var(--r-full); font-weight:600; }
+  .tag-sr   { background:rgba(48,209,88,0.2); color:#30D158; border:1px solid rgba(48,209,88,0.3); }
+  .tag-dn   { background:rgba(100,210,255,0.2); color:#64D2FF; border:1px solid rgba(100,210,255,0.3); }
+  .tag-col  { background:rgba(255,159,10,0.2); color:#FF9F0A; border:1px solid rgba(255,159,10,0.3); }
+</style>
+</head>
+<body>
+<nav class="mockup-nav">
+  <a class="nav-home" href="index.html">Mockups</a>
+  <span class="separator">/</span>
+  <span class="current">14 · HiPixel 对比屏</span>
+</nav>
+<div class="mockup-body">
+<div class="page">
+  <div class="compare-nav">
+    <a href="13-hipixel-queue.html" class="btn-icon" style="font-size:16px">←</a>
+    <span style="font-size:14px;font-weight:500">四月是你的谎言_S01E01_enhanced.mkv</span>
+    <div style="flex:1"></div>
+    <button class="btn btn-secondary btn-sm">📷 保存对比图</button>
+    <button class="btn btn-sm" style="background:var(--hipixel-primary);color:#fff">↓ 下载增强版</button>
+  </div>
+
+  <div class="compare-main">
+    <!-- 对比视频区 -->
+    <div class="compare-video" id="cv">
+      <!-- 原片（左半） -->
+      <div class="video-half video-left" id="leftHalf" style="right:50%">
+        <div class="video-content before-bg">🎌</div>
+        <div class="video-watermark wm-before">原片</div>
+      </div>
+      <!-- 增强版（右半） -->
+      <div class="video-half video-right" id="rightHalf" style="left:50%">
+        <div class="video-content after-bg">🎌</div>
+        <div class="video-watermark wm-after">✨ 已增强</div>
+      </div>
+      <!-- 分割线 -->
+      <div class="divider" id="dividerLine" style="left:50%">
+        <div class="divider-handle">⇔</div>
+      </div>
+    </div>
+
+    <!-- 关键帧报告 -->
+    <div class="keyframe-panel">
+      <div class="kf-header">关键帧报告</div>
+      <script>
+        const frames=[
+          {t:'00:01:23',e:'🎌',tags:['sr','dn']},
+          {t:'00:04:51',e:'🌸',tags:['sr']},
+          {t:'00:08:32',e:'🎭',tags:['sr','dn']},
+          {t:'00:12:07',e:'🎌',tags:['dn']},
+          {t:'00:16:44',e:'🎪',tags:['sr']},
+          {t:'00:20:13',e:'🌙',tags:['sr','dn']},
+        ];
+        const tagLabels={sr:'超分辨率',dn:'降噪',col:'上色'};
+        const tagClass={sr:'tag-sr',dn:'tag-dn',col:'tag-col'};
+        frames.forEach(f=>{
+          document.write(`
+          <div class="kf-item">
+            <div class="kf-thumb">${f.e}</div>
+            <div class="kf-time">${f.t}</div>
+            <div class="kf-tags">${f.tags.map(t=>`<span class="kf-tag ${tagClass[t]}">${tagLabels[t]}</span>`).join('')}</div>
+          </div>`);
+        });
+      </script>
+      <div style="padding:var(--sp-md);font-size:11px;color:var(--text-tertiary)">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span class="kf-tag tag-sr">超分辨率</span>处理区域</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span class="kf-tag tag-dn">降噪</span>处理区域</div>
+        <div style="display:flex;align-items:center;gap:6px"><span class="kf-tag tag-col">上色</span>处理区域</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 进度条 -->
+  <div class="compare-scrubber">
+    <button class="btn-icon">▶</button>
+    <input type="range" style="flex:1" min="0" max="100" value="30">
+    <span class="t-timecode text-secondary">00:07:12 / 22:14</span>
+  </div>
+</div>
+</div>
+
+<script>
+// 分割线拖动
+const cv = document.getElementById('cv');
+const dividerLine = document.getElementById('dividerLine');
+const leftHalf = document.getElementById('leftHalf');
+const rightHalf = document.getElementById('rightHalf');
+let dragging = false;
+
+function setDivider(pct) {
+  const p = Math.max(5, Math.min(95, pct));
+  dividerLine.style.left = p+'%';
+  leftHalf.style.right = (100-p)+'%';
+  rightHalf.style.left = p+'%';
+}
+dividerLine.addEventListener('mousedown', e=>{ dragging=true; e.preventDefault(); });
+document.addEventListener('mousemove', e=>{
+  if (!dragging) return;
+  const rect = cv.getBoundingClientRect();
+  const pct = (e.clientX - rect.left) / rect.width * 100;
+  setDivider(pct);
+});
+document.addEventListener('mouseup', ()=>{ dragging=false; });
+cv.addEventListener('click', e=>{
+  const rect = cv.getBoundingClientRect();
+  const pct = (e.clientX - rect.left) / rect.width * 100;
+  setDivider(pct);
+});
+</script>
+</body>
+</html>

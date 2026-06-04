@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>HiVideo · 角色系统</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  .page { display:flex; flex-direction:column; height:calc(100vh - 40px); }
+  .tabs {
+    display:flex; border-bottom:0.5px solid var(--border-default);
+    padding:0 var(--sp-xl); background:var(--surface-primary); flex-shrink:0;
+  }
+  .tab {
+    padding:var(--sp-sm) var(--sp-md); font-size:14px; cursor:pointer;
+    color:var(--text-secondary); border-bottom:2px solid transparent;
+    margin-bottom:-0.5px; transition:color 0.15s;
+  }
+  .tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+  .content { flex:1; overflow:auto; }
+  /* ── 网格视图 ── */
+  .char-grid {
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+    gap:var(--sp-md); padding:var(--sp-xl);
+  }
+  .char-card {
+    background:var(--surface-primary); border:0.5px solid var(--border-default);
+    border-radius:var(--r-lg); padding:var(--sp-md); text-align:center;
+    cursor:pointer; transition:var(--anim-default);
+  }
+  .char-card:hover { border-color:var(--border-strong); transform:translateY(-2px); box-shadow:var(--shadow-md); }
+  .char-card.active-card { border-color:var(--accent); background:rgba(10,132,255,0.05); }
+  .avatar {
+    width:64px; height:64px; border-radius:50%; margin:0 auto var(--sp-sm);
+    display:flex; align-items:center; justify-content:center;
+    font-size:22px; font-weight:700; color:#fff;
+    position:relative;
+  }
+  .avatar-check {
+    position:absolute; bottom:-2px; right:-2px;
+    width:20px; height:20px; border-radius:50%;
+    background:var(--accent); border:2px solid var(--surface-primary);
+    display:flex; align-items:center; justify-content:center;
+    font-size:10px; color:#fff;
+  }
+  .avatar-unknown {
+    border:1.5px dashed var(--border-strong);
+    background:transparent; color:var(--text-tertiary);
+  }
+  .char-name { font-size:14px; font-weight:500; margin-bottom:3px; }
+  .char-meta { font-size:11px; color:var(--text-secondary); }
+  /* ── 详情视图 ── */
+  .detail-view { padding:var(--sp-xl); }
+  .hero-row {
+    display:flex; align-items:flex-start; gap:var(--sp-xl); margin-bottom:var(--sp-xl);
+  }
+  .hero-avatar {
+    width:96px; height:96px; border-radius:50%; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:36px; font-weight:700; color:#fff; position:relative;
+  }
+  .hero-name { font-size:28px; font-weight:400; margin-bottom:4px; display:flex;align-items:center;gap:var(--sp-xs); }
+  .hero-actor { font-size:15px; color:var(--text-secondary); margin-bottom:3px; }
+  .hero-alias { font-size:13px; color:var(--text-tertiary); }
+  .action-row { display:flex; gap:var(--sp-sm); margin-top:var(--sp-md); }
+  .metrics { display:flex; gap:var(--sp-sm); margin-bottom:var(--sp-xl); }
+  .metric-card {
+    flex:1; background:var(--surface-secondary); border-radius:var(--r-lg);
+    padding:var(--sp-md); text-align:center;
+  }
+  .metric-val { font-size:28px; font-weight:700; color:var(--accent); font-variant-numeric:tabular-nums; line-height:1; margin-bottom:4px; }
+  .metric-label { font-size:12px; color:var(--text-secondary); }
+  .detail-tabs { display:flex; border-bottom:0.5px solid var(--border-default); margin-bottom:var(--sp-md); }
+  .detail-tab { padding:var(--sp-xs) var(--sp-md); font-size:13px; cursor:pointer; color:var(--text-secondary); border-bottom:2px solid transparent; margin-bottom:-0.5px; transition:color 0.15s; }
+  .detail-tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+  .video-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:var(--sp-sm); }
+  .video-thumb {
+    aspect-ratio:2/3; border-radius:var(--r-md); background:var(--surface-secondary);
+    display:flex;align-items:center;justify-content:center;font-size:28px;
+    border:0.5px solid var(--border-default); cursor:pointer;
+    transition:var(--anim-default);
+  }
+  .video-thumb:hover { transform:scale(1.03); box-shadow:var(--shadow-md); }
+</style>
+</head>
+<body>
+<nav class="mockup-nav">
+  <a class="nav-home" href="index.html">Mockups</a>
+  <span class="separator">/</span>
+  <span class="current">05 · 角色系统</span>
+</nav>
+<div class="mockup-body">
+<div class="page">
+  <div class="tabs">
+    <div class="tab active" onclick="showView('grid',this)">角色网格</div>
+    <div class="tab" onclick="showView('detail',this)">角色详情</div>
+  </div>
+
+  <!-- 网格视图 -->
+  <div class="content" id="grid-view">
+    <div class="char-grid">
+      <script>
+        const chars=[
+          {i:0,name:'Tony Stark',sub:'12视频 · 46片段',initials:'TS',id:true},
+          {i:1,name:'宫园薰',sub:'8视频 · 23片段',initials:'薰',id:true},
+          {i:2,name:'Natasha Romanoff',sub:'9视频 · 31片段',initials:'NR',id:true},
+          {i:3,name:'有马公生',sub:'7视频 · 19片段',initials:'公',id:true},
+          {i:4,name:'Steve Rogers',sub:'6视频 · 22片段',initials:'SR',id:true},
+          {i:5,name:'渡中晴',sub:'5视频 · 14片段',initials:'晴',id:true},
+          {i:6,name:'未知角色',sub:'3视频 · 7片段',initials:'?',id:false},
+        ];
+        chars.forEach(c=>{
+          document.write(`
+          <div class="char-card${c.i===0?' active-card':''}" onclick="selectChar(${c.i})">
+            <div class="avatar${!c.id?' avatar-unknown':''}" style="${c.id?'background:var(--char-'+c.i+')':''}">
+              ${c.initials}
+              ${c.id?'<div class="avatar-check">✓</div>':''}
+            </div>
+            <div class="char-name">${c.name}</div>
+            <div class="char-meta">${c.sub}</div>
+          </div>`);
+        });
+      </script>
+    </div>
+  </div>
+
+  <!-- 详情视图 -->
+  <div class="content" id="detail-view" style="display:none">
+    <div class="detail-view">
+      <div class="hero-row">
+        <div class="hero-avatar" style="background:var(--char-0)">TS
+          <div style="position:absolute;bottom:-3px;right:-3px;width:24px;height:24px;border-radius:50%;background:var(--accent);border:2.5px solid var(--surface-background);display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff">✓</div>
+        </div>
+        <div>
+          <div class="hero-name">Tony Stark <span class="badge badge-accent" style="font-size:11px">已识别</span></div>
+          <div class="hero-actor">饰演者：小罗伯特·唐尼</div>
+          <div class="hero-alias">别名：Iron Man · 钢铁侠</div>
+          <div class="action-row">
+            <button class="btn btn-secondary btn-sm">▶ 生成高光</button>
+            <button class="btn btn-secondary btn-sm">✏ 编辑命名</button>
+            <button class="btn btn-secondary btn-sm">👥 对手戏 <span style="color:var(--text-tertiary);margin-left:4px">⌘⇧D</span></button>
+          </div>
+        </div>
+      </div>
+      <div class="metrics">
+        <div class="metric-card"><div class="metric-val">12</div><div class="metric-label">视频</div></div>
+        <div class="metric-card"><div class="metric-val">46</div><div class="metric-label">片段</div></div>
+        <div class="metric-card"><div class="metric-val">3h 24m</div><div class="metric-label">时长</div></div>
+        <div class="metric-card"><div class="metric-val">96%</div><div class="metric-label">置信度</div></div>
+      </div>
+      <div class="detail-tabs">
+        <div class="detail-tab active" onclick="setDTab(this)">出场视频</div>
+        <div class="detail-tab" onclick="setDTab(this)">片段时间轴</div>
+        <div class="detail-tab" onclick="setDTab(this)">台词搜索</div>
+        <div class="detail-tab" onclick="setDTab(this)">关联角色</div>
+        <div class="detail-tab" onclick="setDTab(this)">同演员作品</div>
+      </div>
+      <div class="video-grid">
+        <script>['🦸','🚀','🌙','⚔️','🎭','🎬'].forEach(e=>{
+          document.write(`<div class="video-thumb">${e}</div>`);
+        });</script>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<script>
+function showView(v,tab) {
+  document.querySelectorAll('.page > .tabs .tab').forEach(t=>t.classList.remove('active'));
+  tab.classList.add('active');
+  document.getElementById('grid-view').style.display = v==='grid' ? '' : 'none';
+  document.getElementById('detail-view').style.display = v==='detail' ? '' : 'none';
+}
+function selectChar(i) {
+  document.querySelectorAll('.char-card').forEach(c=>c.classList.remove('active-card'));
+  document.querySelectorAll('.char-card')[i]?.classList.add('active-card');
+}
+function setDTab(tab) {
+  document.querySelectorAll('.detail-tab').forEach(t=>t.classList.remove('active'));
+  tab.classList.add('active');
+}
+</script>
+</body>
+</html>

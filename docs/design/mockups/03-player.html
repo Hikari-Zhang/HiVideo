@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>HiVideo · 播放器</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  .player-screen {
+    height: calc(100vh - 40px);
+    background: #000;
+    position: relative; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+  }
+  /* 模拟视频画面 */
+  .video-bg {
+    position: absolute; inset: 0;
+    background: linear-gradient(160deg, #1a1a2e 0%, #16213e 40%, #0f3460 70%, #1a1a2e 100%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 72px; color: rgba(255,255,255,0.08);
+  }
+  /* HDR 徽章 */
+  .hdr-badge {
+    position: absolute; top: var(--sp-md); right: var(--sp-md);
+    background: rgba(255,214,0,0.15);
+    border: 0.5px solid rgba(255,214,0,0.4);
+    color: #FFD60A; font-size: 10px; font-weight: 700;
+    padding: 3px 8px; border-radius: var(--r-sm);
+    letter-spacing: 0.08em;
+    transition: opacity 0.3s;
+  }
+  /* 控制条 */
+  .controls {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.6) 60%, transparent 100%);
+    backdrop-filter: blur(12px);
+    padding: var(--sp-sm) var(--sp-md) 20px;
+    transform: translateY(0);
+    transition: transform 0.3s ease;
+  }
+  /* 进度条 */
+  .scrubber {
+    position: relative; height: 20px; cursor: pointer;
+    display: flex; align-items: center; margin-bottom: var(--sp-xs);
+  }
+  .scrubber-track {
+    position: absolute; left: 0; right: 0; height: 4px;
+    background: rgba(255,255,255,0.2); border-radius: var(--r-full);
+    transition: height 0.15s;
+  }
+  .scrubber:hover .scrubber-track { height: 8px; }
+  .scrubber-fill {
+    height: 100%; background: var(--accent); border-radius: var(--r-full);
+    width: 35%;
+  }
+  .scrubber-thumb {
+    position: absolute; left: 35%; top: 50%;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: #fff; transform: translate(-50%,-50%);
+    box-shadow: var(--shadow-sm);
+    opacity: 0; transition: opacity 0.15s;
+  }
+  .scrubber:hover .scrubber-thumb { opacity: 1; }
+  /* 悬停预览泡 */
+  .preview-bubble {
+    position: absolute; bottom: 28px; left: 30%;
+    background: var(--surface-elevated);
+    border: 0.5px solid var(--border-default);
+    border-radius: var(--r-md); padding: 4px;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.15s;
+  }
+  .scrubber:hover .preview-bubble { opacity: 1; }
+  .preview-thumb {
+    width: 96px; height: 54px; border-radius: 6px;
+    background: var(--surface-secondary);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; margin-bottom: 3px;
+  }
+  .preview-time { text-align: center; font-size: 11px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+  /* 按钮行 */
+  .ctrl-row {
+    display: flex; align-items: center; gap: var(--sp-sm);
+  }
+  .ctrl-btn {
+    background: transparent; border: none; color: rgba(255,255,255,0.85);
+    cursor: pointer; font-size: 18px; padding: 4px;
+    display: flex; align-items: center; justify-content: center;
+    transition: color 0.15s, transform 0.1s;
+  }
+  .ctrl-btn:hover { color: #fff; transform: scale(1.1); }
+  .ctrl-btn.play { font-size: 24px; }
+  .ctrl-btn.small { font-size: 15px; }
+  .timecode {
+    font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.8);
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+    margin: 0 var(--sp-xs);
+  }
+  .vol-group { display: flex; align-items: center; gap: 6px; }
+  .vol-slider { width: 72px; }
+  .right-btns { margin-left: auto; display: flex; align-items: center; gap: var(--sp-xs); }
+  .ctrl-btn.active { color: #FFD60A; }
+  /* 字幕 */
+  .subtitle {
+    position: absolute; bottom: 96px; left: 50%; transform: translateX(-50%);
+    color: #fff; font-size: 22px; font-weight: 500;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+    text-align: center; white-space: nowrap;
+  }
+  /* 中央大播放按钮（暂停时显示） */
+  .center-play {
+    position: absolute;
+    width: 72px; height: 72px; border-radius: 50%;
+    background: rgba(0,0,0,0.5); backdrop-filter: blur(8px);
+    border: 1.5px solid rgba(255,255,255,0.3);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; color: #fff; cursor: pointer;
+    opacity: 0; transition: opacity 0.2s;
+  }
+  .player-screen.paused .center-play { opacity: 1; }
+</style>
+</head>
+<body>
+<nav class="mockup-nav">
+  <a class="nav-home" href="index.html">Mockups</a>
+  <span class="separator">/</span>
+  <span class="current">03 · 播放器</span>
+</nav>
+<div class="mockup-body">
+<div class="player-screen" id="player">
+  <div class="video-bg">🎬</div>
+
+  <!-- HDR 标识 -->
+  <div class="hdr-badge">DOLBY VISION</div>
+
+  <!-- 字幕 -->
+  <div class="subtitle">こんにちは、有馬くん</div>
+
+  <!-- 中央播放按钮 -->
+  <div class="center-play" onclick="togglePlay()">▶</div>
+
+  <!-- 控制条 -->
+  <div class="controls" id="controls">
+    <!-- 进度条 -->
+    <div class="scrubber">
+      <div class="scrubber-track">
+        <div class="scrubber-fill"></div>
+      </div>
+      <div class="scrubber-thumb"></div>
+      <div class="preview-bubble">
+        <div class="preview-thumb">🎌</div>
+        <div class="preview-time">00:32:15</div>
+      </div>
+    </div>
+
+    <!-- 按钮行 -->
+    <div class="ctrl-row">
+      <button class="ctrl-btn small" title="上一集">⏮</button>
+      <button class="ctrl-btn small" title="-5s">⟪5</button>
+      <button class="ctrl-btn play" id="playBtn" onclick="togglePlay()" title="播放/暂停">⏸</button>
+      <button class="ctrl-btn small" title="+5s">5⟫</button>
+      <button class="ctrl-btn small" title="下一集">⏭</button>
+
+      <span class="timecode">00:32:15 / 02:13:47</span>
+
+      <div class="vol-group">
+        <button class="ctrl-btn small" title="静音" onclick="toggleMute(this)">🔊</button>
+        <input type="range" class="vol-slider" min="0" max="100" value="80" title="音量">
+      </div>
+
+      <div class="right-btns">
+        <button class="ctrl-btn small active" title="字幕已开启">CC</button>
+        <button class="ctrl-btn small" title="画中画">⧉</button>
+        <button class="ctrl-btn small" title="截图">📷</button>
+        <button class="ctrl-btn small" id="enhBtn" title="画质增强" onclick="toggleEnhancement(this)">✨</button>
+        <button class="ctrl-btn small" title="全屏">⛶</button>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+let isPlaying = true;
+let isMuted = false;
+let controlsVisible = true;
+let hideTimer;
+
+function togglePlay() {
+  isPlaying = !isPlaying;
+  document.getElementById('playBtn').textContent = isPlaying ? '⏸' : '▶';
+  document.getElementById('player').classList.toggle('paused', !isPlaying);
+}
+function toggleMute(btn) {
+  isMuted = !isMuted;
+  btn.textContent = isMuted ? '🔇' : '🔊';
+}
+function toggleEnhancement(btn) {
+  btn.classList.toggle('active');
+}
+
+// 自动隐藏控制条
+function resetHideTimer() {
+  clearTimeout(hideTimer);
+  document.getElementById('controls').style.opacity = '1';
+  document.getElementById('hdr-badge');
+  hideTimer = setTimeout(() => {
+    if (isPlaying) {
+      document.getElementById('controls').style.opacity = '0';
+    }
+  }, 2500);
+}
+document.getElementById('player').addEventListener('mousemove', resetHideTimer);
+resetHideTimer();
+</script>
+</body>
+</html>

@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>HiVideo · ⌘K 命令面板</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  .demo-bg {
+    height: calc(100vh - 40px);
+    background: var(--surface-background);
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  /* 背景模糊遮罩 */
+  .backdrop {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.45);
+    display: flex; align-items: flex-start; justify-content: center;
+    padding-top: 80px;
+  }
+  /* 面板主体 */
+  .palette {
+    width: 640px; max-height: 480px;
+    background: rgba(44,44,46,0.95);
+    backdrop-filter: blur(40px) saturate(200%);
+    border: 0.5px solid var(--border-strong);
+    border-radius: var(--r-xl);
+    box-shadow: var(--shadow-xl);
+    overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  /* 搜索栏 */
+  .search-row {
+    display: flex; align-items: center; gap: var(--sp-md);
+    padding: 0 var(--sp-md); height: 52px; flex-shrink: 0;
+    border-bottom: 0.5px solid var(--border-default);
+  }
+  .search-icon { font-size: 17px; color: var(--text-tertiary); flex-shrink: 0; }
+  .search-row input {
+    flex: 1; background: transparent; border: none; color: var(--text-primary);
+    font-size: 17px; outline: none;
+  }
+  .search-row input::placeholder { color: var(--text-tertiary); }
+  .esc-hint {
+    background: var(--surface-secondary);
+    border: 0.5px solid var(--border-default);
+    border-radius: var(--r-sm);
+    padding: 3px 8px; font-size: 11px; color: var(--text-tertiary);
+    flex-shrink: 0;
+  }
+  /* 结果列表 */
+  .results { flex: 1; overflow-y: auto; padding: var(--sp-xs) 0; }
+  /* 分组 */
+  .group-header {
+    padding: 6px var(--sp-md) 3px;
+    font-size: 11px; font-weight: 600;
+    color: var(--text-tertiary);
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  /* 结果行 */
+  .result-row {
+    display: flex; align-items: center; gap: var(--sp-sm);
+    padding: 0 var(--sp-sm); margin: 0 var(--sp-xs);
+    height: 44px; border-radius: var(--r-md); cursor: pointer;
+    transition: background 0.1s;
+  }
+  .result-row:hover, .result-row.selected {
+    background: var(--state-hover);
+  }
+  .result-row.selected { background: rgba(10,132,255,0.15); }
+  .result-icon {
+    width: 28px; height: 28px; border-radius: var(--r-sm);
+    background: var(--surface-secondary);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; flex-shrink: 0;
+  }
+  /* 海报缩略图（视频搜索结果） */
+  .result-poster {
+    width: 28px; height: 42px; border-radius: 4px;
+    background: var(--surface-secondary);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+  .result-text { flex: 1; overflow: hidden; }
+  .result-title { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .result-sub   { font-size: 12px; color: var(--text-secondary); }
+  .result-shortcut {
+    background: var(--surface-secondary);
+    border: 0.5px solid var(--border-default);
+    border-radius: var(--r-sm);
+    padding: 2px 7px; font-size: 11px; color: var(--text-tertiary);
+    flex-shrink: 0;
+  }
+  /* 底部提示 */
+  .footer {
+    padding: var(--sp-xs) var(--sp-md);
+    border-top: 0.5px solid var(--border-default);
+    display: flex; gap: var(--sp-md);
+    font-size: 11px; color: var(--text-tertiary);
+    flex-shrink: 0;
+  }
+  .kbd {
+    background: var(--surface-secondary);
+    border: 0.5px solid var(--border-default);
+    border-radius: 4px; padding: 1px 5px;
+  }
+</style>
+</head>
+<body>
+<nav class="mockup-nav">
+  <a class="nav-home" href="index.html">Mockups</a>
+  <span class="separator">/</span>
+  <span class="current">04 · ⌘K 命令面板</span>
+</nav>
+<div class="mockup-body">
+<div class="demo-bg">
+  <!-- 背景（模拟媒体库） -->
+  <div style="position:absolute;inset:0;display:grid;grid-template-columns:repeat(6,1fr);gap:8px;padding:20px;opacity:0.15;pointer-events:none">
+    <script>
+      ['🎌','🦸','🎭','🌸','🚀','🎪'].forEach(e=>{
+        document.write(`<div style="aspect-ratio:2/3;background:var(--surface-secondary);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:32px">${e}</div>`);
+      });
+    </script>
+  </div>
+
+  <div class="backdrop">
+    <div class="palette">
+      <!-- 搜索栏 -->
+      <div class="search-row">
+        <span class="search-icon">🔍</span>
+        <input id="search" type="text" placeholder="搜索或输入命令…" oninput="filter(this.value)" autofocus>
+        <span class="esc-hint">esc</span>
+      </div>
+
+      <!-- 结果列表 -->
+      <div class="results" id="results">
+        <!-- 最近使用 -->
+        <div class="group-header">最近使用</div>
+        <div class="result-row selected">
+          <div class="result-icon">▶</div>
+          <div class="result-text">
+            <div class="result-title">继续播放「四月是你的谎言 E02」</div>
+            <div class="result-sub">上次在 00:12:43 停止</div>
+          </div>
+        </div>
+        <div class="result-row">
+          <div class="result-icon">✨</div>
+          <div class="result-text"><div class="result-title">画质增强</div></div>
+          <span class="result-shortcut">⌘E</span>
+        </div>
+
+        <!-- 视频 -->
+        <div class="group-header">视频 (3)</div>
+        <div class="result-row">
+          <div class="result-poster">🎌</div>
+          <div class="result-text">
+            <div class="result-title">四月是你的谎言 S01 E01</div>
+            <div class="result-sub">1080p · 23:47</div>
+          </div>
+        </div>
+        <div class="result-row">
+          <div class="result-poster">🦸</div>
+          <div class="result-text">
+            <div class="result-title">复仇者联盟 4：终局之战</div>
+            <div class="result-sub">4K HDR · 3:01:22</div>
+          </div>
+        </div>
+        <div class="result-row">
+          <div class="result-poster">🌸</div>
+          <div class="result-text">
+            <div class="result-title">鬼灭之刃 S01 E19</div>
+            <div class="result-sub">1080p · 23:12</div>
+          </div>
+        </div>
+
+        <!-- 操作 -->
+        <div class="group-header">操作</div>
+        <div class="result-row">
+          <div class="result-icon">💬</div>
+          <div class="result-text"><div class="result-title">生成字幕（Whisper）</div></div>
+          <span class="result-shortcut">⌘J</span>
+        </div>
+        <div class="result-row">
+          <div class="result-icon">📝</div>
+          <div class="result-text"><div class="result-title">生成视频摘要</div></div>
+          <span class="result-shortcut">⌘U</span>
+        </div>
+        <div class="result-row">
+          <div class="result-icon">🔊</div>
+          <div class="result-text"><div class="result-title">音频增强</div></div>
+          <span class="result-shortcut">⌘⌥A</span>
+        </div>
+        <div class="result-row">
+          <div class="result-icon">🖥</div>
+          <div class="result-text"><div class="result-title">算力节点设置</div></div>
+          <span class="result-shortcut">⌘⌥N</span>
+        </div>
+
+        <!-- 设置 -->
+        <div class="group-header">设置</div>
+        <div class="result-row">
+          <div class="result-icon">⚙</div>
+          <div class="result-text"><div class="result-title">偏好设置</div></div>
+          <span class="result-shortcut">⌘,</span>
+        </div>
+      </div>
+
+      <!-- 底部 -->
+      <div class="footer">
+        <span><span class="kbd">↑↓</span> 导航</span>
+        <span><span class="kbd">↩</span> 执行</span>
+        <span><span class="kbd">⌘K</span> 命令链</span>
+        <span><span class="kbd">esc</span> 关闭</span>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+// 简单键盘导航演示
+let sel = 0;
+const rows = () => document.querySelectorAll('.result-row');
+document.addEventListener('keydown', e => {
+  const r = rows();
+  if (e.key === 'ArrowDown') { r[sel]?.classList.remove('selected'); sel = Math.min(sel+1, r.length-1); r[sel]?.classList.add('selected'); e.preventDefault(); }
+  if (e.key === 'ArrowUp')   { r[sel]?.classList.remove('selected'); sel = Math.max(sel-1, 0); r[sel]?.classList.add('selected'); e.preventDefault(); }
+});
+rows().forEach((r,i) => r.addEventListener('click', () => { rows().forEach(x=>x.classList.remove('selected')); r.classList.add('selected'); sel=i; }));
+function filter(q) {
+  // 演示：过滤结果行（只对标题做简单匹配）
+  rows().forEach(r => {
+    const title = r.querySelector('.result-title')?.textContent || '';
+    r.style.display = (!q || title.toLowerCase().includes(q.toLowerCase())) ? '' : 'none';
+  });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>HiPixel · 任务队列</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  body { background: var(--hipixel-surface); }
+  .hp-nav {
+    height: 60px; display: flex; align-items: center;
+    padding: 0 var(--sp-xl); gap: var(--sp-xl);
+    border-bottom: 1px solid var(--hipixel-border);
+    background: rgba(17,24,39,0.95);
+    position: sticky; top: 0; z-index: 10;
+  }
+  .hp-logo { font-size: 17px; font-weight: 700; color: var(--hipixel-primary); }
+  .page {
+    display: flex; flex-direction: column;
+    height: calc(100vh - 40px);
+  }
+  .queue-header {
+    padding: var(--sp-xl) var(--sp-xl) 0;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .page-title { font-size: 22px; font-weight: 700; }
+  /* Tab Bar */
+  .tab-bar {
+    display: flex; padding: 0 var(--sp-xl);
+    border-bottom: 1px solid var(--hipixel-border);
+    margin-top: var(--sp-md);
+  }
+  .hp-tab {
+    padding: var(--sp-sm) var(--sp-md); font-size: 14px; cursor: pointer;
+    color: var(--text-secondary); border-bottom: 2px solid transparent;
+    margin-bottom: -1px; transition: color 0.15s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .hp-tab:hover { color: var(--text-primary); }
+  .hp-tab.active { color: var(--hipixel-primary); border-bottom-color: var(--hipixel-primary); }
+  .hp-tab-badge {
+    background: var(--hipixel-primary); color: #fff;
+    border-radius: var(--r-full); font-size: 11px; font-weight: 700;
+    padding: 1px 6px; min-width: 18px; text-align: center;
+  }
+  .hp-tab-badge.gray { background: rgba(255,255,255,0.15); color: var(--text-secondary); }
+  /* 任务列表 */
+  .task-list { flex: 1; overflow-y: auto; padding: var(--sp-md) var(--sp-xl); }
+  .task-card {
+    background: var(--hipixel-card); border: 1px solid var(--hipixel-border);
+    border-radius: var(--r-lg); padding: var(--sp-md);
+    margin-bottom: var(--sp-sm); transition: var(--anim-default);
+  }
+  .task-card:hover { border-color: rgba(255,255,255,0.2); }
+  .task-row { display: flex; align-items: flex-start; gap: var(--sp-md); }
+  .task-thumb {
+    width: 64px; height: 48px; border-radius: var(--r-sm);
+    background: rgba(255,255,255,0.08);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; flex-shrink: 0;
+  }
+  .task-info { flex: 1; min-width: 0; }
+  .task-name { font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 3px; }
+  .task-meta { font-size: 12px; color: var(--text-secondary); margin-bottom: var(--sp-xs); }
+  .task-stage { font-size: 12px; color: var(--text-tertiary); }
+  .task-right { display: flex; flex-direction: column; align-items: flex-end; gap: var(--sp-xs); flex-shrink: 0; }
+  .status-badge {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 12px; font-weight: 600;
+    padding: 3px 8px; border-radius: var(--r-full);
+  }
+  .status-processing { background: rgba(100,210,255,0.15); color: var(--functional-info); }
+  .status-queued     { background: rgba(255,255,255,0.08); color: var(--text-secondary); }
+  .status-done       { background: rgba(48,209,88,0.15); color: var(--functional-success); }
+  .status-error      { background: rgba(255,69,58,0.15); color: var(--functional-error); }
+  .task-progress { margin-top: var(--sp-xs); }
+  .progress-bar-hp { height: 4px; background: rgba(255,255,255,0.1); border-radius: var(--r-full); overflow: hidden; margin-bottom: 4px; }
+  .progress-fill-hp { height: 100%; background: var(--hipixel-primary); border-radius: var(--r-full); transition: width 1s; }
+  .progress-info { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-tertiary); }
+  .task-actions { display: flex; gap: var(--sp-xs); margin-top: var(--sp-sm); }
+  /* 完成任务的特殊操作区 */
+  .done-actions {
+    display: flex; gap: var(--sp-xs); padding-top: var(--sp-sm);
+    border-top: 1px solid var(--hipixel-border); margin-top: var(--sp-sm);
+  }
+  .done-btn {
+    flex: 1; padding: 7px; border-radius: var(--r-sm); border: 1px solid var(--hipixel-border);
+    background: transparent; color: var(--text-secondary); font-size: 13px; cursor: pointer;
+    transition: var(--anim-quick);
+  }
+  .done-btn:hover { background: rgba(255,255,255,0.05); color: var(--text-primary); }
+  .done-btn.primary { background: var(--hipixel-primary); color: #fff; border-color: var(--hipixel-primary); }
+  .done-btn.primary:hover { background: var(--hipixel-primary-hover); }
+</style>
+</head>
+<body>
+<nav class="mockup-nav">
+  <a class="nav-home" href="index.html">Mockups</a>
+  <span class="separator">/</span>
+  <span class="current">13 · HiPixel 任务队列</span>
+</nav>
+<div class="mockup-body">
+<div class="page">
+  <nav class="hp-nav">
+    <div class="hp-logo">⚡ HiPixel</div>
+    <div style="flex:1"></div>
+    <button class="btn btn-sm" style="background:var(--hipixel-primary);color:#fff" onclick="location.href='12-hipixel-upload.html'">+ 新任务</button>
+    <div style="width:32px;height:32px;border-radius:50%;background:var(--hipixel-primary);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700">H</div>
+  </nav>
+
+  <div class="queue-header">
+    <div class="page-title">任务队列</div>
+  </div>
+
+  <div class="tab-bar">
+    <div class="hp-tab active" onclick="setTab(this,'processing')">处理中 <span class="hp-tab-badge">1</span></div>
+    <div class="hp-tab" onclick="setTab(this,'queued')">排队中 <span class="hp-tab-badge">2</span></div>
+    <div class="hp-tab" onclick="setTab(this,'done')">完成 <span class="hp-tab-badge gray">18</span></div>
+    <div class="hp-tab" onclick="setTab(this,'error')">失败 <span class="hp-tab-badge" style="background:rgba(255,69,58,0.2);color:var(--functional-error)">1</span></div>
+  </div>
+
+  <div class="task-list" id="taskList">
+    <!-- 处理中 Tab -->
+    <div id="tab-processing">
+      <div class="task-card">
+        <div class="task-row">
+          <div class="task-thumb">🦸</div>
+          <div class="task-info">
+            <div class="task-name">复仇者联盟4_终局之战.mkv</div>
+            <div class="task-meta">老片救星 · 52.3 GB · 2160p</div>
+            <div class="task-stage">⚙ 处理中：Real-ESRGAN 超分（第 2/3 步）</div>
+          </div>
+          <div class="task-right">
+            <div class="status-badge status-processing"><div class="dot dot-busy"></div>处理中</div>
+          </div>
+        </div>
+        <div class="task-progress">
+          <div class="progress-bar-hp"><div class="progress-fill-hp" style="width:78%"></div></div>
+          <div class="progress-info"><span>78%</span><span>剩余约 3 分钟</span></div>
+        </div>
+        <div class="task-actions">
+          <button class="btn btn-secondary btn-sm">⏸ 暂停</button>
+          <button class="btn btn-secondary btn-sm">✕ 取消</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 排队中 Tab -->
+    <div id="tab-queued" style="display:none">
+      <div class="task-card">
+        <div class="task-row">
+          <div class="task-thumb">🎌</div>
+          <div class="task-info">
+            <div class="task-name">四月是你的谎言 S01 E01.mkv</div>
+            <div class="task-meta">番剧增强 · 1.3 GB · 1080p</div>
+            <div class="task-stage">● 排队中 · 前面还有 1 个任务</div>
+          </div>
+          <div class="task-right">
+            <div class="status-badge status-queued">排队中</div>
+            <div style="font-size:20px;cursor:grab;color:var(--text-tertiary)" title="拖拽调整顺序">⠿</div>
+          </div>
+        </div>
+        <div class="task-actions">
+          <button class="btn btn-secondary btn-sm">↑ 提高优先级</button>
+          <button class="btn btn-destructive btn-sm">✕ 取消</button>
+        </div>
+      </div>
+      <div class="task-card">
+        <div class="task-row">
+          <div class="task-thumb">🌸</div>
+          <div class="task-info">
+            <div class="task-name">鬼灭之刃 S03 E10.mkv</div>
+            <div class="task-meta">番剧增强 · 1.1 GB · 1080p</div>
+            <div class="task-stage">● 排队中 · 前面还有 2 个任务</div>
+          </div>
+          <div class="task-right">
+            <div class="status-badge status-queued">排队中</div>
+            <div style="font-size:20px;cursor:grab;color:var(--text-tertiary)">⠿</div>
+          </div>
+        </div>
+        <div class="task-actions">
+          <button class="btn btn-destructive btn-sm">✕ 取消</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 完成 Tab -->
+    <div id="tab-done" style="display:none">
+      <div class="task-card">
+        <div class="task-row">
+          <div class="task-thumb">🎌</div>
+          <div class="task-info">
+            <div class="task-name">四月是你的谎言_S01E01_enhanced.mkv</div>
+            <div class="task-meta">番剧增强 · 1.4 GB · 1080p · 耗时 4分32秒</div>
+            <div class="task-stage" style="color:var(--text-tertiary)">2026-06-04 15:32</div>
+          </div>
+          <div class="task-right">
+            <div class="status-badge status-done">✓ 完成</div>
+          </div>
+        </div>
+        <div class="done-actions">
+          <button class="done-btn primary" onclick="location.href='14-hipixel-compare.html'">⊞ 对比查看</button>
+          <button class="done-btn">↓ 下载</button>
+          <button class="done-btn">🔗 分享（24h）</button>
+        </div>
+      </div>
+      <div class="task-card" style="opacity:0.6">
+        <div class="task-row">
+          <div class="task-thumb">🦸</div>
+          <div class="task-info">
+            <div class="task-name">复仇者联盟_enhanced.mkv</div>
+            <div class="task-meta">老片救星 · 48.2 GB · 2160p · 耗时 18分32秒</div>
+            <div class="task-stage" style="color:var(--text-tertiary)">2026-06-03 23:15</div>
+          </div>
+          <div class="task-right"><div class="status-badge status-done">✓ 完成</div></div>
+        </div>
+        <div class="done-actions">
+          <button class="done-btn">⊞ 对比</button>
+          <button class="done-btn primary">↓ 下载</button>
+          <button class="done-btn">🔗 分享</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 失败 Tab -->
+    <div id="tab-error" style="display:none">
+      <div class="task-card">
+        <div class="task-row">
+          <div class="task-thumb">🌙</div>
+          <div class="task-info">
+            <div class="task-name">千与千寻_4K重制.mkv</div>
+            <div class="task-meta">极致修复 · 28.5 GB · 4K</div>
+            <div class="task-stage" style="color:var(--functional-error)">✕ 错误：VRAM 不足（需要 ≥8GB，当前 6GB）</div>
+          </div>
+          <div class="task-right"><div class="status-badge status-error">失败</div></div>
+        </div>
+        <div class="task-actions">
+          <button class="btn btn-secondary btn-sm">切换预设重试</button>
+          <button class="btn btn-destructive btn-sm">删除</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<script>
+const tabs = ['processing','queued','done','error'];
+function setTab(tab, id) {
+  document.querySelectorAll('.hp-tab').forEach(t=>t.classList.remove('active'));
+  tab.classList.add('active');
+  tabs.forEach(t => {
+    const el = document.getElementById('tab-'+t);
+    if (el) el.style.display = t===id ? '' : 'none';
+  });
+}
+</script>
+</body>
+</html>

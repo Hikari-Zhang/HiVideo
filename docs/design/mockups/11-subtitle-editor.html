@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>HiVideo · 字幕编辑器</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  .editor {
+    display: flex; flex-direction: column;
+    height: calc(100vh - 40px);
+    background: var(--surface-background);
+  }
+  /* 顶部工具栏 */
+  .editor-toolbar {
+    height: 48px; display: flex; align-items: center; gap: var(--sp-sm);
+    padding: 0 var(--sp-md); border-bottom: 0.5px solid var(--border-default);
+    background: var(--surface-primary); flex-shrink: 0;
+  }
+  .file-name { font-size: 14px; font-weight: 500; flex: 1; }
+  .ai-btn {
+    display: flex; align-items: center; gap: 4px;
+    background: rgba(255,214,0,0.12); border: 0.5px solid rgba(255,214,0,0.3);
+    color: #FFD60A; border-radius: var(--r-sm);
+    padding: 5px var(--sp-sm); font-size: 13px; cursor: pointer;
+  }
+  /* 三栏主体 */
+  .editor-body { display: flex; flex: 1; overflow: hidden; }
+  /* 左：字幕列表 */
+  .sub-list {
+    width: 240px; flex-shrink: 0;
+    border-right: 0.5px solid var(--border-default);
+    overflow-y: auto;
+  }
+  .sub-item {
+    padding: var(--sp-sm) var(--sp-md);
+    border-bottom: 0.5px solid var(--border-default);
+    cursor: pointer; transition: background 0.1s;
+  }
+  .sub-item:hover   { background: var(--state-hover); }
+  .sub-item.active  { background: rgba(10,132,255,0.1); border-left: 2.5px solid var(--accent); }
+  .sub-idx  { font-size: 11px; color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
+  .sub-time { font-size: 11px; color: var(--text-secondary); font-variant-numeric: tabular-nums; margin: 2px 0; }
+  .sub-text { font-size: 13px; line-height: 1.4; }
+  .sub-text-en { font-size: 12px; color: var(--text-secondary); }
+  /* 中：预览 */
+  .preview-pane { flex: 1; display: flex; flex-direction: column; }
+  .video-preview {
+    flex: 1; background: #000;
+    display: flex; align-items: center; justify-content: center;
+    position: relative; min-height: 0;
+  }
+  .video-placeholder { font-size: 56px; opacity: 0.2; }
+  .preview-subtitle {
+    position: absolute; bottom: var(--sp-xl);
+    color: #fff; font-size: 20px; font-weight: 500;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.8);
+    text-align: center; padding: 0 var(--sp-xl);
+  }
+  .preview-controls {
+    height: 52px; background: var(--surface-primary);
+    border-top: 0.5px solid var(--border-default);
+    display: flex; align-items: center; padding: 0 var(--sp-md); gap: var(--sp-sm);
+    flex-shrink: 0;
+  }
+  .edit-area {
+    padding: var(--sp-md);
+    border-top: 0.5px solid var(--border-default);
+    background: var(--surface-secondary); flex-shrink: 0;
+  }
+  .edit-row { display: flex; gap: var(--sp-sm); margin-bottom: var(--sp-xs); }
+  .edit-row input { flex: 1; }
+  .edit-label { font-size: 11px; color: var(--text-tertiary); margin-bottom: 3px; }
+  /* 右：波形+时间轴 */
+  .waveform-pane {
+    width: 280px; flex-shrink: 0;
+    border-left: 0.5px solid var(--border-default);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .wave-header {
+    height: 40px; display: flex; align-items: center; padding: 0 var(--sp-sm);
+    border-bottom: 0.5px solid var(--border-default); flex-shrink: 0;
+    font-size: 12px; color: var(--text-secondary); gap: var(--sp-xs);
+  }
+  .wave-scroll { flex: 1; overflow-y: auto; padding: var(--sp-xs); }
+  /* 波形行 */
+  .wave-row { margin-bottom: var(--sp-xs); }
+  .wave-time { font-size: 10px; color: var(--text-tertiary); font-variant-numeric: tabular-nums; margin-bottom: 3px; }
+  .wave-canvas {
+    height: 32px; background: var(--surface-secondary);
+    border-radius: var(--r-sm); position: relative; overflow: hidden;
+  }
+  /* 模拟波形 */
+  .wave-canvas::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(
+      90deg,
+      transparent, transparent 3px,
+      rgba(10,132,255,0.15) 3px, rgba(10,132,255,0.15) 4px
+    );
+  }
+  .sub-block {
+    position: absolute; top: 4px; bottom: 4px;
+    background: var(--accent); opacity: 0.6;
+    border-radius: 3px; cursor: ew-resize;
+  }
+  .sub-block.active { opacity: 1; box-shadow: 0 0 0 2px rgba(10,132,255,0.4); }
+  .silence-block {
+    position: absolute; top: 0; bottom: 0;
+    background: rgba(255,69,58,0.15);
+  }
+  /* 底部操作栏 */
+  .bottom-bar {
+    height: 44px; display: flex; align-items: center; gap: var(--sp-sm);
+    padding: 0 var(--sp-md);
+    border-top: 0.5px solid var(--border-default);
+    background: var(--surface-primary); flex-shrink: 0;
+  }
+  .shortcut-tag {
+    background: var(--surface-secondary);
+    border: 0.5px solid var(--border-default);
+    border-radius: var(--r-sm); padding: 2px 6px; font-size: 11px; color: var(--text-tertiary);
+  }
+</style>
+</head>
+<body>
+<nav class="mockup-nav">
+  <a class="nav-home" href="index.html">Mockups</a>
+  <span class="separator">/</span>
+  <span class="current">11 · 字幕编辑器</span>
+</nav>
+<div class="mockup-body">
+<div class="editor">
+  <!-- 工具栏 -->
+  <div class="editor-toolbar">
+    <button class="btn-icon">←</button>
+    <span class="file-name">四月是你的谎言 S01 E01.srt</span>
+    <button class="btn btn-secondary btn-sm">整体偏移 <span class="shortcut-tag">⌘[/]</span></button>
+    <button class="btn btn-secondary btn-sm">帧率拉伸</button>
+    <div class="ai-btn">✨ AI 修订</div>
+    <button class="btn btn-primary btn-sm">保存</button>
+  </div>
+
+  <div class="editor-body">
+    <!-- 字幕列表 -->
+    <div class="sub-list">
+      <script>
+        const subs=[
+          {i:1,t:'00:01:23,400 → 00:01:26,200',jp:'こんにちは、有馬くん',cn:'你好，有马君'},
+          {i:2,t:'00:01:26,800 → 00:01:29,100',jp:'あっ、宮園さん！',cn:'啊，宫园同学！'},
+          {i:3,t:'00:01:30,000 → 00:01:34,500',jp:'久しぶりだね、ピアノ弾いてる？',cn:'好久不见，还在弹琴吗？'},
+          {i:4,t:'00:01:35,200 → 00:01:38,800',jp:'うん、ちょっとだけね',cn:'嗯，只是稍微弹弹'},
+          {i:5,t:'00:01:39,400 → 00:01:43,000',jp:'また一緒に弾こうよ',cn:'要不要再一起弹啊'},
+          {i:6,t:'00:01:44,200 → 00:01:47,600',jp:'…え？',cn:'…啊？'},
+          {i:7,t:'00:01:48,000 → 00:01:52,400',jp:'有馬くんの演奏が聴きたい',cn:'我想听有马君弹琴'},
+          {i:8,t:'00:01:53,000 → 00:01:56,800',jp:'もう弾けないって言ったじゃないか',cn:'我不是说过我弹不了了吗'},
+        ];
+        subs.forEach((s,idx)=>{
+          document.write(`
+          <div class="sub-item${idx===2?' active':''}" onclick="selectSub(this)">
+            <div class="sub-idx">${s.i}</div>
+            <div class="sub-time">${s.t}</div>
+            <div class="sub-text">${s.jp}</div>
+            <div class="sub-text-en text-secondary">${s.cn}</div>
+          </div>`);
+        });
+      </script>
+    </div>
+
+    <!-- 预览 -->
+    <div class="preview-pane">
+      <div class="video-preview">
+        <div class="video-placeholder">🎌</div>
+        <div class="preview-subtitle">久しぶりだね、ピアノ弾いてる？<br><span style="font-size:16px;opacity:0.8">好久不见，还在弹琴吗？</span></div>
+      </div>
+      <div class="preview-controls">
+        <button class="ctrl-btn" style="font-size:18px;background:transparent;border:none;color:var(--text-primary);cursor:pointer">▶</button>
+        <input type="range" style="flex:1" min="0" max="100" value="12">
+        <span class="t-timecode text-secondary">00:01:30 / 22:14</span>
+      </div>
+      <div class="edit-area">
+        <div class="edit-row">
+          <div style="flex:1"><div class="edit-label">原文</div><input class="input" value="久しぶりだね、ピアノ弾いてる？" style="font-size:14px"></div>
+        </div>
+        <div class="edit-row">
+          <div style="flex:1"><div class="edit-label">译文</div><input class="input" value="好久不见，还在弹琴吗？" style="font-size:14px"></div>
+        </div>
+        <div class="edit-row">
+          <div><div class="edit-label">开始</div><input class="input t-mono" value="00:01:30,000" style="width:128px"></div>
+          <div><div class="edit-label">结束</div><input class="input t-mono" value="00:01:34,500" style="width:128px"></div>
+          <div style="display:flex;align-items:flex-end;gap:4px">
+            <button class="btn btn-secondary btn-sm">拆分</button>
+            <button class="btn btn-secondary btn-sm">合并</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 波形时间轴 -->
+    <div class="waveform-pane">
+      <div class="wave-header">
+        🔍 时间轴
+        <button class="btn-icon btn-sm" style="margin-left:auto;font-size:13px">−</button>
+        <button class="btn-icon btn-sm" style="font-size:13px">+</button>
+      </div>
+      <div class="wave-scroll">
+        <script>
+          for(let i=0;i<8;i++){
+            const t=`00:01:${String(20+i*4).padStart(2,'0')}`;
+            const hasBlock=i===2||i===3||i===5;
+            const isSilence=i===1||i===6;
+            const isActive=i===2;
+            document.write(`
+            <div class="wave-row">
+              <div class="wave-time">${t}</div>
+              <div class="wave-canvas">
+                ${isSilence?'<div class="silence-block" style="left:0;right:0;"></div>':''}
+                ${hasBlock?`<div class="sub-block${isActive?' active':''}" style="left:10%;width:${20+Math.random()*40}%;"></div>`:''}
+              </div>
+            </div>`);
+          }
+        </script>
+        <div style="font-size:11px;color:var(--text-tertiary);padding:var(--sp-xs);text-align:center">
+          <span style="display:inline-block;width:10px;height:6px;background:var(--accent);border-radius:2px;margin-right:4px;vertical-align:middle"></span>字幕块
+          <span style="display:inline-block;width:10px;height:6px;background:rgba(255,69,58,0.3);border-radius:2px;margin:0 4px 0 8px;vertical-align:middle"></span>静默段
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 底部状态栏 -->
+  <div class="bottom-bar">
+    <span class="t-caption1 text-secondary">8 条字幕</span>
+    <div class="divider-v" style="height:16px;margin:0 var(--sp-xs)"></div>
+    <span class="t-caption1 text-tertiary">整体偏移</span>
+    <span class="shortcut-tag">⌘[</span>
+    <span class="shortcut-tag">⌘]</span>
+    <div class="divider-v" style="height:16px;margin:0 var(--sp-xs)"></div>
+    <span class="t-caption1 text-tertiary">帧步进</span>
+    <span class="shortcut-tag">,</span>
+    <span class="shortcut-tag">.</span>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:var(--sp-xs)">
+      <span class="t-caption1 text-secondary">缩放</span>
+      <span class="shortcut-tag">⌘+</span>
+      <span class="shortcut-tag">⌘-</span>
+    </div>
+  </div>
+</div>
+</div>
+<script>
+function selectSub(el) {
+  document.querySelectorAll('.sub-item').forEach(s=>s.classList.remove('active'));
+  el.classList.add('active');
+}
+</script>
+</body>
+</html>
