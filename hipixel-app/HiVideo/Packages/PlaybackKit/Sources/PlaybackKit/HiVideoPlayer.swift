@@ -307,7 +307,8 @@ public final class HiVideoPlayer: Player, ObservableObject {
     }
 
     private func detectHDR(from track: AVAssetTrack) async {
-        guard let desc = track.formatDescriptions.first as? CMFormatDescription else { return }
+        guard let rawDesc = track.formatDescriptions.first else { return }
+        let desc = rawDesc as! CMFormatDescription
 
         let extensions = CMFormatDescriptionGetExtensions(desc) as? [String: Any] ?? [:]
         let transferFunction = extensions[kCMFormatDescriptionExtension_TransferFunction as String] as? String ?? ""
