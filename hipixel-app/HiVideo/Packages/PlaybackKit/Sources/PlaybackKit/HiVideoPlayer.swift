@@ -57,6 +57,7 @@ public final class HiVideoPlayer: Player, ObservableObject {
     private var videoOutput: AVAssetReaderTrackOutput?
     private var audioOutput: AudioOutput = AudioOutput()
     private var displayLink: DisplayLink?
+    private var currentURL: URL?
 
     /// Metal 渲染器（由外部通过 makeRenderer() 获取后注入到 MTKView）
     public let renderer: MetalRenderer = MetalRenderer()
@@ -79,28 +80,97 @@ public final class HiVideoPlayer: Player, ObservableObject {
 
     // MARK: - Load
 
+    // 容器格式：AVFoundation 不支持的，标记为 ffmpegRequired
+    private static let avUnsupported: Set<String> = [
+        "mkv", "avi", "ts", "m2ts", "mts", "rmvb", "rm", "wmv", "flv", "webm",
+    ]
+
     public func load(_ url: URL) async throws {
         status = .loading
+        currentURL = url
 
-        let asset = AVAsset(url: url)
+        let ext = url.pathExtension.lowercased()
+        let needsFFmpeg = Self.avUnsupported.contains(ext)
+
+        if needsFFmpeg {
+            // MKV 等：用 ffprobe 获取基本信息，播放走 ffmpeg pipe（Phase 2.5 实现）
+            // Phase 1 先标记 ready 并记录 URL，播放时走 AVPlayer 尝试（部分 MKV 可播）
+            await loadWithAVPlayer(url: url)
+        } else {
+            await loadWithAVAssetReader(url: url)
+        }
+    }
+
+    private func loadWithAVAssetReader(url: URL) async {
+        let asset = AVURLAsset(url: url,
+                               options: [AVURLAssetPreferPreciseDurationAndTimingKey: false])
+
+        // 用 loadValuesAsynchronously 避免 async/await 路径触发内部校验日志
+        let loaded: Bool = await withCheckedContinuation { cont in
+            asset.loadValuesAsynchronously(forKeys: ["tracks", "duration", "playable"]) {
+                let s = asset.statusOfValue(forKey: "duration", error: nil)
+                cont.resume(returning: s == .loaded)
+            }
+        }
+
+        guard loaded else {
+            status = .error("无法加载文件")
+            return
+        }
+
         self.asset = asset
+        duration = asset.duration
 
-        // 加载基本属性
-        let (tracks, _) = try await asset.load(.tracks, .duration)
-        let dur = try await asset.load(.duration)
-        duration = dur
-
-        // 视频轨道信息
-        if let vTrack = tracks.first(where: { $0.mediaType == .video }) {
-            let size = try await vTrack.load(.naturalSize)
-            videoSize = size
+        if let vTrack = asset.tracks(withMediaType: .video).first {
+            let size = vTrack.naturalSize.applying(vTrack.preferredTransform)
+            videoSize = CGSize(width: abs(size.width), height: abs(size.height))
             await detectHDR(from: vTrack)
         }
 
-        // 音频/字幕轨道枚举
         await loadTrackInfo(from: asset)
-
         status = .ready
+    }
+
+    private func loadWithAVPlayer(url: URL) async {
+        // MKV Phase 1 兜底：直接用 AVPlayer（部分 MKV H.264 可播，全靠系统）
+        // 不走 AVAsset 的属性加载，避免签名校验日志
+        // 仅设置基本状态，实际 duration/videoSize 会在 pipeline 启动后更新
+        self.asset = AVAsset(url: url)
+        // 用 ffprobe 静默获取 duration
+        let dur = await ffprobeDuration(url: url)
+        if dur > 0 {
+            duration = CMTime(seconds: dur, preferredTimescale: 600)
+        }
+        status = .ready
+    }
+
+    private func ffprobeDuration(url: URL) async -> Double {
+        return await withCheckedContinuation { cont in
+            Task.detached(priority: .utility) {
+                let candidates = ["/opt/homebrew/bin/ffprobe",
+                                  "/usr/local/bin/ffprobe", "/usr/bin/ffprobe"]
+                guard let ffprobe = candidates.first(where: {
+                    FileManager.default.isExecutableFile(atPath: $0)
+                }) else {
+                    cont.resume(returning: 0)
+                    return
+                }
+                let proc = Process()
+                proc.executableURL = URL(fileURLWithPath: ffprobe)
+                proc.arguments = ["-v", "quiet",
+                                   "-show_entries", "format=duration",
+                                   "-of", "default=noprint_wrappers=1:nokey=1",
+                                   url.path]
+                let pipe = Pipe()
+                proc.standardOutput = pipe
+                proc.standardError  = FileHandle.nullDevice
+                try? proc.run()
+                proc.waitUntilExit()
+                let out = String(data: pipe.fileHandleForReading.readDataToEndOfFile(),
+                                 encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                cont.resume(returning: Double(out) ?? 0)
+            }
+        }
     }
 
     // MARK: - Playback Control
@@ -160,8 +230,8 @@ public final class HiVideoPlayer: Player, ObservableObject {
             let timeRange = CMTimeRange(start: time, end: asset.duration)
             reader.timeRange = timeRange
 
-            // 视频输出（VideoToolbox 解码后 CVPixelBuffer）
-            if let vTrack = try? await asset.loadTracks(withMediaType: .video).first {
+            // 视频输出：用同步 tracks(withMediaType:) 避免 async 触发签名校验
+            if let vTrack = asset.tracks(withMediaType: .video).first {
                 let settings: [String: Any] = [
                     kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
                 ]
@@ -220,42 +290,24 @@ public final class HiVideoPlayer: Player, ObservableObject {
     // MARK: - Private: Track Info
 
     private func loadTrackInfo(from asset: AVAsset) async {
-        var audio: [TrackInfo] = []
-        var subs: [TrackInfo] = []
+        // 用同步 tracks(withMediaType:) 避免 async load 触发 AVFoundation 校验日志
+        let audioTrackList = asset.tracks(withMediaType: .audio)
+        let subTrackList   = asset.tracks(withMediaType: .text)
 
-        if let audioTracks = try? await asset.loadTracks(withMediaType: .audio) {
-            for (idx, track) in audioTracks.enumerated() {
-                let lang = (try? await track.load(.languageCode)) ?? "und"
-                audio.append(TrackInfo(
-                    id: idx,
-                    language: lang,
-                    title: "音频 \(idx + 1)",
-                    codec: "AAC",
-                    isDefault: idx == 0
-                ))
-            }
+        audioTracks = audioTrackList.enumerated().map { idx, track in
+            let lang = track.languageCode ?? "und"
+            return TrackInfo(id: idx, language: lang,
+                             title: "音频 \(idx + 1)", codec: "AAC", isDefault: idx == 0)
         }
-
-        if let subTracks = try? await asset.loadTracks(withMediaType: .text) {
-            for (idx, track) in subTracks.enumerated() {
-                let lang = (try? await track.load(.languageCode)) ?? "und"
-                subs.append(TrackInfo(
-                    id: idx,
-                    language: lang,
-                    title: "字幕 \(idx + 1)",
-                    codec: "SRT"
-                ))
-            }
+        subtitleTracks = subTrackList.enumerated().map { idx, track in
+            let lang = track.languageCode ?? "und"
+            return TrackInfo(id: idx, language: lang,
+                             title: "字幕 \(idx + 1)", codec: "SRT")
         }
-
-        audioTracks = audio
-        subtitleTracks = subs
     }
 
     private func detectHDR(from track: AVAssetTrack) async {
-        // 通过 formatDescriptions 检测 HDR 格式
-        guard let descs = try? await track.load(.formatDescriptions),
-              let desc = descs.first else { return }
+        guard let desc = track.formatDescriptions.first else { return }
 
         let extensions = CMFormatDescriptionGetExtensions(desc) as? [String: Any] ?? [:]
         let transferFunction = extensions[kCMFormatDescriptionExtension_TransferFunction as String] as? String ?? ""
