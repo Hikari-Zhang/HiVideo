@@ -198,20 +198,20 @@
 
 | 序号 | 界面 | 说明 | 目标文件名 | 对应 Phase |
 |------|------|------|-----------|-----------|
-| 3 | **未知角色命名弹窗** | 识别到新角色后弹出：人脸缩略图组 + 输入框 + TMDB 候选列表 + 拆分按钮 | `18-character-naming.html` | Phase 5 |
-| 4 | **误聚类拆分流程** | 角色详情页识别样本 Tab → 多选错误片段 → 确认拆分弹窗 → 负样本反馈 | 合并入 `05-character.html` 新增交互 | Phase 5 |
-| 5 | **在线字幕搜索结果列表** | 来源 / 语言 / 下载量 / 评分 / 上传时间，一键下载，错误提示 | `19-subtitle-search.html` | Phase 6 |
-| 6 | **网盘诊断面板** | 选中网盘后弹出详情：RTT / 带宽 / 错误日志 / 重连 / 吊销 | 合并入 `10-node-settings.html` 侧边展开 | Phase 7 |
-| 7 | **HiPixel · 任务详情页** | 单任务展开：参数详情 / 分阶段处理日志 / 关键帧预览 / 重试选项 | `20-hipixel-task-detail.html` | Phase 2 |
-| 8 | **HiPixel · 用户设置 / 配额** | 账户信息 / 剩余 GPU 分钟配额 / 订阅计划 / API Key | `21-hipixel-settings.html` | Phase 2 |
+| 3 | ~~**未知角色命名弹窗**~~ ✅ | 人脸缩略图组 + 输入框 + TMDB 候选 + 误聚类拆分确认弹窗 | `18-character-naming.html` | Phase 5 |
+| 4 | ~~**误聚类拆分流程**~~ ✅ | 流程步骤说明 + 拆分确认弹窗，合并于命名弹窗页面 | `18-character-naming.html` | Phase 5 |
+| 5 | ~~**在线字幕搜索结果列表**~~ ✅ | 多来源 + 语言过滤 + 评分 + 预览面板 + 哈希匹配 | `19-subtitle-search.html` | Phase 6 |
+| 6 | **网盘诊断面板** | 选中网盘后弹出详情：RTT / 带宽 / 错误日志 / 重连 / 吊销 | 待合并入 `10-node-settings.html` | Phase 7 |
+| 7 | ~~**HiPixel · 任务详情页**~~ ✅ | 阶段进度条 + 处理参数 + 关键帧报告 + 处理日志 | `20-hipixel-task-detail.html` | Phase 2 |
+| 8 | ~~**HiPixel · 用户设置 / 配额**~~ ✅ | 账户信息 + GPU 配额环 + API Key + 订阅计划 | `21-hipixel-settings.html` | Phase 2 |
 
 ### 🟢 P2（可选，后续迭代补充）
 
 | 序号 | 界面 | 说明 | 目标文件名 | 对应 Phase |
 |------|------|------|-----------|-----------|
-| 9 | **角色对手戏 / 高光集锦页** | 两角色共同出场片段列表；3 分钟自动混剪预览 | `22-character-duet.html` | Phase 5 |
-| 10 | **HiPixel · 暗色模式适配** | Web 全站深色主题细化（目前为浅色草稿）| 更新现有 HiPixel 文件 | Phase 2 |
-| 11 | **HiPixel · 移动端响应式** | < 768px 断点下的布局：单列、预设横向滚动 | 更新现有 HiPixel 文件 | Phase 2 |
+| 9 | ~~**角色对手戏 / 高光集锦页**~~ ✅ | 双角色片段列表 + 集锦生成配置 + 预览播放器 | `22-character-duet.html` | Phase 5 |
+| 10 | ~~**HiPixel · 暗色/浅色模式**~~ ✅ | 上传屏新增主题切换按钮，light-mode CSS 完整适配 | `12-hipixel-upload.html` 已更新 | Phase 2 |
+| 11 | ~~**HiPixel · 移动端响应式**~~ ✅ | 三断点响应式（桌面3列/平板2列/手机横向滚动）+ 视口模拟器 | `12-hipixel-upload.html` 已更新 | Phase 2 |
 
 ---
 

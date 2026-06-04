@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>HiVideo · 角色命名弹窗</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  body { overflow-y: auto; height: auto; }
+  .demo-bg {
+    min-height: calc(100vh - 40px);
+    background: var(--surface-background);
+    display: flex; gap: var(--sp-xxl);
+    align-items: flex-start; justify-content: center;
+    padding: var(--sp-xxl);
+  }
+  /* ── 命名弹窗 ── */
+  .naming-sheet {
+    width: 480px;
+    background: var(--surface-elevated);
+    border: 0.5px solid var(--border-strong);
+    border-radius: var(--r-xl);
+    box-shadow: var(--shadow-xl);
+    overflow: hidden;
+  }
+  .sheet-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: var(--sp-md) var(--sp-xl);
+    border-bottom: 0.5px solid var(--border-default);
+  }
+  .sheet-title { font-size: 17px; font-weight: 600; }
+  .sheet-close { background: transparent; border: none; color: var(--text-tertiary); font-size: 20px; cursor: pointer; }
+  .sheet-body { padding: var(--sp-xl); }
+  .context-line { font-size: 14px; color: var(--text-secondary); margin-bottom: var(--sp-md); }
+  /* 人脸缩略图组 */
+  .face-strip { display: flex; gap: var(--sp-xs); margin-bottom: var(--sp-md); flex-wrap: wrap; }
+  .face-thumb {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: var(--surface-secondary);
+    border: 0.5px solid var(--border-default);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; overflow: hidden; flex-shrink: 0;
+  }
+  .face-more {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: var(--surface-secondary);
+    border: 0.5px solid var(--border-default);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; color: var(--text-tertiary); flex-shrink: 0;
+  }
+  /* 输入框 */
+  .input-label { font-size: 13px; color: var(--text-secondary); margin-bottom: 6px; }
+  .name-input-wrap { position: relative; margin-bottom: var(--sp-md); }
+  .name-input-wrap input {
+    width: 100%; background: var(--surface-secondary);
+    border: 0.5px solid var(--border-default);
+    border-radius: var(--r-md); color: var(--text-primary);
+    font-size: 15px; padding: 9px var(--sp-md); outline: none;
+    transition: border-color 0.15s;
+  }
+  .name-input-wrap input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(10,132,255,0.15); }
+  /* TMDB 候选 */
+  .tmdb-section { margin-bottom: var(--sp-md); }
+  .tmdb-title { font-size: 12px; color: var(--text-tertiary); margin-bottom: var(--sp-xs); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+  .candidate-list { display: flex; flex-direction: column; gap: 3px; }
+  .candidate-row {
+    display: flex; align-items: center; gap: var(--sp-sm);
+    padding: var(--sp-xs) var(--sp-sm);
+    border-radius: var(--r-md); cursor: pointer;
+    transition: background 0.1s; border: 0.5px solid transparent;
+  }
+  .candidate-row:hover   { background: var(--state-hover); }
+  .candidate-row.selected { background: var(--state-selected); border-color: var(--accent); }
+  .cand-avatar {
+    width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+    background: var(--char-1); display: flex; align-items: center;
+    justify-content: center; font-size: 14px; font-weight: 700; color: #fff;
+  }
+  .cand-name { font-size: 14px; font-weight: 500; }
+  .cand-meta { font-size: 12px; color: var(--text-secondary); }
+  .cand-check { margin-left: auto; font-size: 16px; color: var(--accent); }
+  /* 底部操作 */
+  .sheet-footer {
+    padding: var(--sp-md) var(--sp-xl);
+    border-top: 0.5px solid var(--border-default);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .footer-left { display: flex; gap: var(--sp-xs); }
+  .footer-right { display: flex; gap: var(--sp-xs); }
+
+  /* ── 误聚类拆分流程说明面板 ── */
+  .flow-panel {
+    width: 380px;
+  }
+  .flow-title { font-size: 16px; font-weight: 600; margin-bottom: var(--sp-sm); }
+  .flow-step {
+    display: flex; gap: var(--sp-sm); margin-bottom: var(--sp-md);
+  }
+  .flow-num {
+    width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;
+    background: var(--accent); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+  }
+  .flow-content { flex: 1; }
+  .flow-step-title { font-size: 14px; font-weight: 500; margin-bottom: 3px; }
+  .flow-step-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+  /* 拆分确认弹窗 */
+  .confirm-sheet {
+    margin-top: var(--sp-xl);
+    background: var(--surface-elevated);
+    border: 0.5px solid var(--border-strong);
+    border-radius: var(--r-xl);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+  }
+  .selected-clips {
+    display: flex; gap: var(--sp-xs); flex-wrap: wrap;
+    padding: var(--sp-sm) var(--sp-xl);
+    border-bottom: 0.5px solid var(--border-default);
+  }
+  .clip-thumb {
+    width: 48px; height: 72px; border-radius: var(--r-sm);
+    background: var(--surface-secondary);
+    border: 2px solid var(--functional-error);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; position: relative;
+  }
+  .clip-thumb::after {
+    content: '✕'; position: absolute; top: -6px; right: -6px;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: var(--functional-error); color: #fff;
+    font-size: 9px; display: flex; align-items: center; justify-content: center;
+    font-weight: 700;
+  }
+</style>
+</head>
+<body>
+<nav class="mockup-nav">
+  <a class="nav-home" href="index.html">Mockups</a>
+  <span class="separator">/</span>
+  <span class="current">18 · 角色命名 + 误聚类拆分</span>
+</nav>
+<div class="mockup-body" style="overflow:auto">
+<div class="demo-bg">
+
+  <!-- 命名弹窗 -->
+  <div>
+    <div style="font-size:12px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:var(--sp-sm)">未知角色命名弹窗</div>
+    <div class="naming-sheet">
+      <div class="sheet-header">
+        <span class="sheet-title">识别到新角色</span>
+        <button class="sheet-close">✕</button>
+      </div>
+      <div class="sheet-body">
+        <div class="context-line">在《四月是你的谎言》中发现一位出现频繁的角色</div>
+
+        <!-- 人脸缩略图 -->
+        <div class="face-strip">
+          <div class="face-thumb">👩</div>
+          <div class="face-thumb">👩</div>
+          <div class="face-thumb">👩</div>
+          <div class="face-thumb">👩</div>
+          <div class="face-more">+8</div>
+        </div>
+
+        <!-- 输入框 -->
+        <div class="input-label">这是谁？</div>
+        <div class="name-input-wrap">
+          <input type="text" id="nameInput" placeholder="输入角色名…" value="宫园薰" oninput="filterCandidates(this.value)">
+        </div>
+
+        <!-- TMDB 候选 -->
+        <div class="tmdb-section">
+          <div class="tmdb-title">来自 TMDB 的候选</div>
+          <div class="candidate-list" id="candidates">
+            <div class="candidate-row selected" onclick="selectCand(this,'宫园薰')">
+              <div class="cand-avatar" style="background:var(--char-1)">薰</div>
+              <div>
+                <div class="cand-name">宫园薰</div>
+                <div class="cand-meta">《四月是你的谎言》· 女主角</div>
+              </div>
+              <span class="cand-check">✓</span>
+            </div>
+            <div class="candidate-row" onclick="selectCand(this,'涉谷薰')">
+              <div class="cand-avatar" style="background:var(--char-3)">涉</div>
+              <div>
+                <div class="cand-name">涉谷薰</div>
+                <div class="cand-meta">《灌篮高手》· 配角</div>
+              </div>
+            </div>
+            <div class="candidate-row" onclick="selectCand(this,'not-in-library')">
+              <div class="cand-avatar" style="background:var(--surface-secondary);color:var(--text-tertiary);font-size:18px">?</div>
+              <div>
+                <div class="cand-name" style="color:var(--text-secondary)">这不是库里的角色</div>
+                <div class="cand-meta">使用手动输入的名称</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="sheet-footer">
+        <div class="footer-left">
+          <button class="btn btn-ghost btn-sm">稍后处理</button>
+          <button class="btn btn-secondary btn-sm">这不是同一人，拆分</button>
+        </div>
+        <div class="footer-right">
+          <button class="btn btn-secondary btn-sm">跳过</button>
+          <button class="btn btn-primary btn-sm">确认命名</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 误聚类拆分流程 -->
+  <div class="flow-panel">
+    <div style="font-size:12px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:var(--sp-sm)">误聚类拆分流程</div>
+    <div class="flow-title">当角色被错误合并时</div>
+
+    <div class="flow-step">
+      <div class="flow-num">1</div>
+      <div class="flow-content">
+        <div class="flow-step-title">进入角色详情页 → 识别样本 Tab</div>
+        <div class="flow-step-desc">在该 Tab 中可以看到所有被归入此角色的片段缩略图，带置信度分数。</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-num">2</div>
+      <div class="flow-content">
+        <div class="flow-step-title">⌘ 多选错误片段</div>
+        <div class="flow-step-desc">点击不属于该角色的片段（会出现红色边框），支持 ⌘ 多选。</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-num">3</div>
+      <div class="flow-content">
+        <div class="flow-step-title">点击「这不是 [角色名]」</div>
+        <div class="flow-step-desc">底部操作栏出现红色按钮，确认后弹出拆分确认弹窗。</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-num">4</div>
+      <div class="flow-content">
+        <div class="flow-step-title">确认 → 负样本生效</div>
+        <div class="flow-step-desc">片段从当前角色移除，AI 模型记住负样本，置信度数字更新。若片段属于已知角色，触发命名弹窗。</div>
+      </div>
+    </div>
+
+    <!-- 拆分确认弹窗 -->
+    <div class="confirm-sheet">
+      <div class="sheet-header" style="padding:var(--sp-sm) var(--sp-md)">
+        <span style="font-size:15px;font-weight:600">确认从 Tony Stark 移除</span>
+        <button class="sheet-close" style="font-size:16px">✕</button>
+      </div>
+      <div style="padding:var(--sp-sm) var(--sp-md);font-size:13px;color:var(--text-secondary)">
+        选中的 <strong style="color:var(--text-primary)">3 个片段</strong>将从 Tony Stark 中移除，并标记为负样本
+      </div>
+      <div class="selected-clips">
+        <div class="clip-thumb">🦸</div>
+        <div class="clip-thumb">🦸</div>
+        <div class="clip-thumb">🦸</div>
+      </div>
+      <div style="padding:var(--sp-xs) var(--sp-md) var(--sp-sm)">
+        <label style="display:flex;align-items:center;gap:var(--sp-xs);font-size:13px;color:var(--text-secondary);cursor:pointer">
+          <input type="checkbox" checked> 同时询问这是哪个角色
+        </label>
+      </div>
+      <div class="sheet-footer" style="padding:var(--sp-sm) var(--sp-md)">
+        <button class="btn btn-secondary btn-sm">取消</button>
+        <button class="btn btn-destructive btn-sm">移除并标记负样本</button>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+function selectCand(row, name) {
+  document.querySelectorAll('.candidate-row').forEach(r => {
+    r.classList.remove('selected');
+    const check = r.querySelector('.cand-check');
+    if (check) check.remove();
+  });
+  row.classList.add('selected');
+  if (!row.querySelector('.cand-check')) {
+    const chk = document.createElement('span');
+    chk.className = 'cand-check'; chk.textContent = '✓';
+    row.appendChild(chk);
+  }
+  if (name !== 'not-in-library') {
+    document.getElementById('nameInput').value = name;
+  }
+}
+function filterCandidates(val) {
+  document.querySelectorAll('.candidate-row').forEach(r => {
+    const n = r.querySelector('.cand-name')?.textContent || '';
+    r.style.display = (!val || n.includes(val)) ? '' : 'none';
+  });
+}
+</script>
+</body>
+</html>

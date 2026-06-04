@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>HiVideo · 角色对手戏 / 高光集锦</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  .page { display:flex; flex-direction:column; height:calc(100vh - 40px); background:var(--surface-background); }
+  /* 顶部 */
+  .duet-header {
+    height: var(--toolbar-height);
+    display: flex; align-items: center; gap: var(--sp-md);
+    padding: 0 var(--sp-xl); border-bottom: 0.5px solid var(--border-default);
+    background: rgba(28,28,30,0.8); backdrop-filter: blur(20px); flex-shrink: 0;
+  }
+  .page-title-row { flex: 1; }
+  /* Tab */
+  .tab-bar {
+    display: flex; padding: 0 var(--sp-xl); border-bottom: 0.5px solid var(--border-default);
+    background: var(--surface-primary); flex-shrink: 0;
+  }
+  .htab {
+    padding: var(--sp-sm) var(--sp-md); font-size: 14px; cursor: pointer;
+    color: var(--text-secondary); border-bottom: 2px solid transparent;
+    margin-bottom: -0.5px; transition: color 0.15s;
+  }
+  .htab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  /* 对手戏选择器 */
+  .duet-selector {
+    display: flex; align-items: center; gap: var(--sp-md);
+    padding: var(--sp-md) var(--sp-xl);
+    border-bottom: 0.5px solid var(--border-default);
+    background: var(--surface-primary); flex-shrink: 0;
+  }
+  .char-pill {
+    display: flex; align-items: center; gap: var(--sp-xs);
+    background: var(--surface-secondary);
+    border: 0.5px solid var(--border-default);
+    border-radius: var(--r-full); padding: 5px var(--sp-sm);
+    cursor: pointer; transition: var(--anim-quick);
+  }
+  .char-pill:hover { border-color: var(--border-strong); }
+  .char-pill.selected { border-color: var(--accent); background: rgba(10,132,255,0.08); }
+  .char-avatar-sm {
+    width: 24px; height: 24px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; color: #fff; flex-shrink: 0;
+  }
+  .vs-label {
+    font-size: 12px; font-weight: 700; color: var(--text-tertiary);
+    padding: 0 var(--sp-xs);
+  }
+  /* 主体：片段网格 */
+  .content { flex: 1; overflow-y: auto; }
+  .duet-grid {
+    padding: var(--sp-xl);
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: var(--sp-md);
+  }
+  .clip-card {
+    background: var(--surface-primary);
+    border: 0.5px solid var(--border-default);
+    border-radius: var(--r-lg); overflow: hidden; cursor: pointer;
+    transition: var(--anim-default);
+  }
+  .clip-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: var(--border-strong); }
+  .clip-thumb {
+    aspect-ratio: 16/9; background: var(--surface-secondary);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px; position: relative;
+  }
+  .clip-duration {
+    position: absolute; bottom: var(--sp-xxs); right: var(--sp-xs);
+    background: rgba(0,0,0,0.7); color: #fff;
+    font-size: 11px; padding: 2px 6px; border-radius: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+  .play-overlay {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.3); opacity: 0; transition: opacity 0.15s;
+  }
+  .clip-card:hover .play-overlay { opacity: 1; }
+  .play-circle {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: rgba(0,0,0,0.6); border: 2px solid rgba(255,255,255,0.8);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; color: #fff;
+  }
+  .clip-meta { padding: var(--sp-sm); }
+  .clip-source { font-size: 12px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .clip-timecode { font-size: 11px; color: var(--text-tertiary); font-variant-numeric: tabular-nums; margin-top: 2px; }
+  /* 高光集锦面板 */
+  .highlight-panel {
+    padding: var(--sp-xl);
+    display: flex; flex-direction: column; align-items: center; gap: var(--sp-md);
+  }
+  .preview-card {
+    width: 100%; max-width: 560px;
+    background: var(--surface-primary); border: 0.5px solid var(--border-default);
+    border-radius: var(--r-xl); overflow: hidden;
+  }
+  .preview-video {
+    aspect-ratio: 16/9; background: #000;
+    display: flex; align-items: center; justify-content: center; font-size: 64px;
+  }
+  .preview-controls {
+    padding: var(--sp-sm) var(--sp-md);
+    display: flex; align-items: center; gap: var(--sp-sm);
+    border-top: 0.5px solid var(--border-default);
+  }
+  .config-row {
+    width: 100%; max-width: 560px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-sm);
+  }
+  .config-card {
+    background: var(--surface-primary); border: 0.5px solid var(--border-default);
+    border-radius: var(--r-lg); padding: var(--sp-md);
+  }
+  .config-label { font-size: 12px; color: var(--text-secondary); margin-bottom: var(--sp-xs); }
+</style>
+</head>
+<body>
+<nav class="mockup-nav">
+  <a class="nav-home" href="index.html">Mockups</a>
+  <span class="separator">/</span>
+  <span class="current">22 · 对手戏 / 高光集锦</span>
+</nav>
+<div class="mockup-body">
+<div class="page">
+  <!-- 顶部 -->
+  <div class="duet-header">
+    <a href="05-character.html" class="btn-icon" style="font-size:16px;text-decoration:none;color:var(--text-primary)">←</a>
+    <div class="page-title-row">
+      <div style="font-size:15px;font-weight:600">角色关系探索</div>
+      <div style="font-size:12px;color:var(--text-secondary)">Tony Stark 与宫园薰 · 跨片共同出场</div>
+    </div>
+    <button class="btn btn-secondary btn-sm">⌘⇧D</button>
+  </div>
+
+  <!-- Tab -->
+  <div class="tab-bar">
+    <div class="htab active" onclick="showTab('duet',this)">对手戏 <span style="background:var(--accent);color:#fff;font-size:10px;padding:1px 5px;border-radius:var(--r-full);font-weight:700;margin-left:4px">18</span></div>
+    <div class="htab" onclick="showTab('highlight',this)">高光集锦</div>
+  </div>
+
+  <!-- 对手戏 Tab -->
+  <div id="tab-duet">
+    <!-- 角色选择器 -->
+    <div class="duet-selector">
+      <span style="font-size:13px;color:var(--text-secondary)">角色：</span>
+      <div class="char-pill selected">
+        <div class="char-avatar-sm" style="background:var(--char-0)">T</div>
+        <span style="font-size:13px">Tony Stark</span>
+        <span style="font-size:14px;color:var(--text-tertiary)">✕</span>
+      </div>
+      <span class="vs-label">VS</span>
+      <div class="char-pill selected">
+        <div class="char-avatar-sm" style="background:var(--char-1)">薰</div>
+        <span style="font-size:13px">宫园薰</span>
+        <span style="font-size:14px;color:var(--text-tertiary)">✕</span>
+      </div>
+      <button class="btn btn-ghost btn-sm">+ 添加角色</button>
+      <div style="margin-left:auto;font-size:13px;color:var(--text-secondary)">共 <strong style="color:var(--text-primary)">18</strong> 个共同出场片段</div>
+    </div>
+
+    <!-- 片段网格 -->
+    <div class="content">
+      <div class="duet-grid">
+        <script>
+          const clips=[
+            {e:'🎌',src:'四月是你的谎言 S01E01',tc:'00:01:23 – 00:01:48',dur:'0:25'},
+            {e:'🦸',src:'复仇者联盟 E04',tc:'01:02:11 – 01:03:30',dur:'1:19'},
+            {e:'🎌',src:'四月是你的谎言 S01E03',tc:'00:14:07 – 00:14:52',dur:'0:45'},
+            {e:'🦸',src:'复仇者联盟 E01',tc:'00:48:22 – 00:49:10',dur:'0:48'},
+            {e:'🎌',src:'四月是你的谎言 S01E05',tc:'00:05:33 – 00:06:44',dur:'1:11'},
+            {e:'🦸',src:'钢铁侠 E02',tc:'00:32:18 – 00:33:02',dur:'0:44'},
+          ];
+          clips.forEach(c=>{
+            document.write(`
+            <div class="clip-card">
+              <div class="clip-thumb">${c.e}
+                <div class="play-overlay"><div class="play-circle">▶</div></div>
+                <span class="clip-duration">${c.dur}</span>
+              </div>
+              <div class="clip-meta">
+                <div class="clip-source">${c.src}</div>
+                <div class="clip-timecode">${c.tc}</div>
+              </div>
+            </div>`);
+          });
+        </script>
+      </div>
+    </div>
+  </div>
+
+  <!-- 高光集锦 Tab -->
+  <div id="tab-highlight" style="display:none">
+    <div class="content">
+      <div class="highlight-panel">
+        <!-- 预览 -->
+        <div class="preview-card">
+          <div class="preview-video">🦸</div>
+          <div class="preview-controls">
+            <button style="background:transparent;border:none;color:var(--text-primary);font-size:20px;cursor:pointer">▶</button>
+            <input type="range" style="flex:1" min="0" max="100" value="0">
+            <span class="t-timecode text-secondary">00:00 / 03:00</span>
+          </div>
+        </div>
+
+        <!-- 配置 -->
+        <div class="config-row">
+          <div class="config-card">
+            <div class="config-label">集锦时长</div>
+            <select class="pref-select" style="width:100%;background:var(--surface-secondary);border:0.5px solid var(--border-default);border-radius:var(--r-sm);color:var(--text-primary);font-size:13px;padding:6px var(--sp-xs);outline:none">
+              <option>1 分钟（精华）</option>
+              <option selected>3 分钟（标准）</option>
+              <option>5 分钟（完整）</option>
+            </select>
+          </div>
+          <div class="config-card">
+            <div class="config-label">选取依据</div>
+            <select class="pref-select" style="width:100%;background:var(--surface-secondary);border:0.5px solid var(--border-default);border-radius:var(--r-sm);color:var(--text-primary);font-size:13px;padding:6px var(--sp-xs);outline:none">
+              <option selected>置信度最高的片段</option>
+              <option>对话最多的片段</option>
+              <option>按时间均匀分布</option>
+            </select>
+          </div>
+          <div class="config-card">
+            <div class="config-label">过渡效果</div>
+            <select class="pref-select" style="width:100%;background:var(--surface-secondary);border:0.5px solid var(--border-default);border-radius:var(--r-sm);color:var(--text-primary);font-size:13px;padding:6px var(--sp-xs);outline:none">
+              <option selected>淡入淡出</option>
+              <option>硬切</option>
+              <option>滑动</option>
+            </select>
+          </div>
+          <div class="config-card">
+            <div class="config-label">背景音乐</div>
+            <select class="pref-select" style="width:100%;background:var(--surface-secondary);border:0.5px solid var(--border-default);border-radius:var(--r-sm);color:var(--text-primary);font-size:13px;padding:6px var(--sp-xs);outline:none">
+              <option selected>保留原声</option>
+              <option>静音</option>
+              <option>添加配乐</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:var(--sp-sm)">
+          <button class="btn btn-secondary">↺ 重新生成</button>
+          <button class="btn btn-primary">↓ 导出集锦</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+function showTab(id, tab) {
+  document.querySelectorAll('.htab').forEach(t=>t.classList.remove('active'));
+  tab.classList.add('active');
+  document.getElementById('tab-duet').style.display      = id==='duet'      ? 'flex' : 'none';
+  document.getElementById('tab-highlight').style.display = id==='highlight' ? 'flex' : 'none';
+  // 对手戏 Tab 需要 flex 方向为 column
+  if(id==='duet') document.getElementById('tab-duet').style.flexDirection='column';
+}
+// 初始化对手戏 Tab 显示
+document.getElementById('tab-duet').style.display='flex';
+document.getElementById('tab-duet').style.flexDirection='column';
+document.getElementById('tab-duet').style.flex='1';
+document.getElementById('tab-duet').style.overflow='hidden';
+</script>
+</body>
+</html>

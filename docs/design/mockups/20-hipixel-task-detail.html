@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>HiPixel · 任务详情</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  body { background: var(--hipixel-surface); overflow-y: auto; height: auto; }
+  .hp-nav {
+    height: 60px; display: flex; align-items: center;
+    padding: 0 var(--sp-xl); gap: var(--sp-md);
+    border-bottom: 1px solid var(--hipixel-border);
+    background: rgba(17,24,39,0.95);
+    position: sticky; top: 0; z-index: 10;
+  }
+  .hp-logo { font-size: 17px; font-weight: 700; color: var(--hipixel-primary); }
+  .page-wrap { max-width: 960px; margin: 0 auto; padding: var(--sp-xxl); }
+  /* 头部 */
+  .task-header {
+    display: flex; align-items: flex-start; gap: var(--sp-xl);
+    margin-bottom: var(--sp-xl);
+    padding-bottom: var(--sp-xl);
+    border-bottom: 1px solid var(--hipixel-border);
+  }
+  .task-thumb {
+    width: 120px; height: 90px; border-radius: var(--r-lg);
+    background: rgba(255,255,255,0.06);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 48px; flex-shrink: 0;
+    border: 0.5px solid var(--hipixel-border);
+  }
+  .task-meta { flex: 1; }
+  .task-name { font-size: 22px; font-weight: 600; margin-bottom: var(--sp-xs); }
+  .task-info { font-size: 14px; color: var(--text-secondary); margin-bottom: var(--sp-md); }
+  .task-actions { display: flex; gap: var(--sp-sm); }
+  /* 进행 상태 */
+  .status-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 12px; border-radius: var(--r-full);
+    font-size: 13px; font-weight: 600;
+  }
+  .status-done { background: rgba(48,209,88,0.15); color: var(--functional-success); }
+  /* 总进度 */
+  .overall-progress {
+    background: var(--hipixel-card);
+    border: 1px solid var(--hipixel-border);
+    border-radius: var(--r-lg); padding: var(--sp-md) var(--sp-xl);
+    margin-bottom: var(--sp-md);
+  }
+  .prog-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-sm); }
+  .prog-title { font-size: 14px; font-weight: 600; }
+  .prog-time  { font-size: 13px; color: var(--text-secondary); }
+  /* 阶段进度 */
+  .stages { display: flex; gap: var(--sp-xs); margin-top: var(--sp-md); }
+  .stage-block {
+    flex: 1; padding: var(--sp-xs) var(--sp-sm);
+    border-radius: var(--r-sm);
+    border: 1px solid var(--hipixel-border);
+    background: rgba(255,255,255,0.03);
+  }
+  .stage-name  { font-size: 11px; color: var(--text-secondary); margin-bottom: 3px; }
+  .stage-time  { font-size: 12px; font-variant-numeric: tabular-nums; }
+  .stage-block.done    { border-color: rgba(48,209,88,0.3); background: rgba(48,209,88,0.06); }
+  .stage-block.active  { border-color: rgba(139,92,246,0.5); background: rgba(139,92,246,0.08); }
+  .stage-block.pending { opacity: 0.4; }
+  /* 参数卡 */
+  .params-card {
+    background: var(--hipixel-card);
+    border: 1px solid var(--hipixel-border);
+    border-radius: var(--r-lg); overflow: hidden;
+    margin-bottom: var(--sp-md);
+  }
+  .card-title-bar {
+    padding: var(--sp-sm) var(--sp-md);
+    background: rgba(255,255,255,0.03);
+    border-bottom: 1px solid var(--hipixel-border);
+    font-size: 13px; font-weight: 600; color: var(--text-secondary);
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .params-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    padding: var(--sp-sm);
+  }
+  .param-row {
+    display: flex; justify-content: space-between;
+    padding: 5px var(--sp-sm);
+    font-size: 13px;
+  }
+  .param-key { color: var(--text-secondary); }
+  .param-val { color: var(--text-primary); font-weight: 500; }
+  /* 关键帧 */
+  .kf-grid {
+    display: grid; grid-template-columns: repeat(4,1fr); gap: var(--sp-sm);
+    padding: var(--sp-md);
+  }
+  .kf-card { cursor: pointer; transition: var(--anim-quick); }
+  .kf-card:hover { transform: translateY(-2px); }
+  .kf-thumb {
+    aspect-ratio: 16/9; border-radius: var(--r-sm);
+    background: rgba(255,255,255,0.06);
+    display: flex; align-items: center; justify-content: center; font-size: 28px;
+    margin-bottom: 4px; position: relative; overflow: hidden;
+  }
+  .kf-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.6));
+  }
+  .kf-time  { font-size: 10px; color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
+  .kf-tags  { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 2px; }
+  .kf-tag   { font-size: 9px; padding: 1px 5px; border-radius: 3px; font-weight: 600; }
+  .kf-tag.sr  { background: rgba(48,209,88,0.2); color: #30D158; }
+  .kf-tag.dn  { background: rgba(100,210,255,0.2); color: #64D2FF; }
+  /* 日志 */
+  .log-area {
+    background: #0a0a0a; border-radius: var(--r-md);
+    padding: var(--sp-md); font-family: 'SF Mono', monospace;
+    font-size: 12px; line-height: 1.6; overflow-y: auto; max-height: 200px;
+    margin: 0 var(--sp-md) var(--sp-md);
+    border: 0.5px solid rgba(255,255,255,0.08);
+  }
+  .log-ts   { color: rgba(255,255,255,0.3); }
+  .log-ok   { color: var(--functional-success); }
+  .log-info { color: var(--functional-info); }
+  .log-warn { color: var(--functional-warning); }
+</style>
+</head>
+<body>
+<nav class="mockup-nav">
+  <a class="nav-home" href="index.html">Mockups</a>
+  <span class="separator">/</span>
+  <span class="current">20 · HiPixel 任务详情</span>
+</nav>
+<div class="mockup-body" style="overflow:auto">
+<nav class="hp-nav">
+  <a href="13-hipixel-queue.html" style="color:var(--accent);font-size:15px;text-decoration:none">←</a>
+  <div class="hp-logo">⚡ HiPixel</div>
+</nav>
+
+<div class="page-wrap">
+  <!-- 任务头部 -->
+  <div class="task-header">
+    <div class="task-thumb">🎌</div>
+    <div class="task-meta">
+      <div style="display:flex;align-items:center;gap:var(--sp-sm);margin-bottom:var(--sp-xs)">
+        <div class="task-name">四月是你的谎言_S01E01_enhanced.mkv</div>
+        <div class="status-badge status-done">✓ 已完成</div>
+      </div>
+      <div class="task-info">番剧增强 · 1.4 GB · 1080p · 耗时 4 分 32 秒 · 2026-06-04 15:32</div>
+      <div class="task-actions">
+        <button class="btn btn-sm" style="background:var(--hipixel-primary);color:#fff">↓ 下载增强版</button>
+        <a href="14-hipixel-compare.html"><button class="btn btn-secondary btn-sm">⊞ 对比查看</button></a>
+        <button class="btn btn-secondary btn-sm">🔗 分享链接（24h）</button>
+        <button class="btn btn-secondary btn-sm">↺ 相同参数重新处理</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 总进度 -->
+  <div class="overall-progress">
+    <div class="prog-header">
+      <span class="prog-title">处理进度</span>
+      <span class="prog-time">总耗时：4分32秒 · 完成于 15:32:14</span>
+    </div>
+    <div class="progress-bar" style="height:6px"><div class="progress-fill success" style="width:100%"></div></div>
+    <div class="stages">
+      <div class="stage-block done">
+        <div class="stage-name">① 上传</div>
+        <div class="stage-time" style="color:var(--functional-success)">✓ 18s</div>
+      </div>
+      <div class="stage-block done">
+        <div class="stage-name">② 解码</div>
+        <div class="stage-time" style="color:var(--functional-success)">✓ 22s</div>
+      </div>
+      <div class="stage-block done">
+        <div class="stage-name">③ NAFNet 降噪</div>
+        <div class="stage-time" style="color:var(--functional-success)">✓ 1m 48s</div>
+      </div>
+      <div class="stage-block done">
+        <div class="stage-name">④ Real-ESRGAN 超分</div>
+        <div class="stage-time" style="color:var(--functional-success)">✓ 2m 04s</div>
+      </div>
+      <div class="stage-block done">
+        <div class="stage-name">⑤ 编码输出</div>
+        <div class="stage-time" style="color:var(--functional-success)">✓ 20s</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 参数 + 关键帧 两列 -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-md);margin-bottom:var(--sp-md)">
+    <!-- 处理参数 -->
+    <div class="params-card">
+      <div class="card-title-bar">处理参数</div>
+      <div class="params-grid">
+        <div class="param-row"><span class="param-key">预设</span><span class="param-val">番剧增强</span></div>
+        <div class="param-row"><span class="param-key">超分模型</span><span class="param-val">RealESRGAN x4</span></div>
+        <div class="param-row"><span class="param-key">降噪强度</span><span class="param-val">30%</span></div>
+        <div class="param-row"><span class="param-key">锐化强度</span><span class="param-val">30%</span></div>
+        <div class="param-row"><span class="param-key">输出分辨率</span><span class="param-val">4K (2160p)</span></div>
+        <div class="param-row"><span class="param-key">输出编码</span><span class="param-val">H.265 CRF 16</span></div>
+        <div class="param-row"><span class="param-key">GPU</span><span class="param-val">RTX 4070 Ti</span></div>
+        <div class="param-row"><span class="param-key">处理节点</span><span class="param-val">家里-RTX4090</span></div>
+      </div>
+    </div>
+
+    <!-- 文件信息 -->
+    <div class="params-card">
+      <div class="card-title-bar">文件信息</div>
+      <div class="params-grid">
+        <div class="param-row"><span class="param-key">输入大小</span><span class="param-val">1.3 GB</span></div>
+        <div class="param-row"><span class="param-key">输出大小</span><span class="param-val">1.4 GB</span></div>
+        <div class="param-row"><span class="param-key">输入分辨率</span><span class="param-val">1920×1080</span></div>
+        <div class="param-row"><span class="param-key">输出分辨率</span><span class="param-val">3840×2160</span></div>
+        <div class="param-row"><span class="param-key">帧率</span><span class="param-val">23.976 fps</span></div>
+        <div class="param-row"><span class="param-key">时长</span><span class="param-val">23:47</span></div>
+        <div class="param-row"><span class="param-key">音频</span><span class="param-val">保留原始 AAC</span></div>
+        <div class="param-row"><span class="param-key">字幕</span><span class="param-val">保留原始轨道</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 关键帧报告 -->
+  <div class="params-card">
+    <div class="card-title-bar">关键帧报告（差异最大的 8 帧）</div>
+    <div class="kf-grid">
+      <script>
+        const frames=[
+          {e:'🎌',t:'00:01:23',tags:['sr','dn']},
+          {e:'🌸',t:'00:04:51',tags:['sr']},
+          {e:'🎭',t:'00:08:32',tags:['sr','dn']},
+          {e:'🎌',t:'00:11:07',tags:['dn']},
+          {e:'🎪',t:'00:14:44',tags:['sr']},
+          {e:'🌙',t:'00:17:13',tags:['sr','dn']},
+          {e:'🎌',t:'00:20:02',tags:['sr']},
+          {e:'🌸',t:'00:22:31',tags:['sr','dn']},
+        ];
+        frames.forEach(f=>{
+          document.write(`
+          <div class="kf-card">
+            <div class="kf-thumb">${f.e}<div class="kf-overlay"></div></div>
+            <div class="kf-time">${f.t}</div>
+            <div class="kf-tags">
+              ${f.tags.map(t=>`<span class="kf-tag ${t}">${t==='sr'?'超分':'降噪'}</span>`).join('')}
+            </div>
+          </div>`);
+        });
+      </script>
+    </div>
+  </div>
+
+  <!-- 处理日志 -->
+  <div class="params-card">
+    <div class="card-title-bar" style="display:flex;justify-content:space-between;align-items:center">
+      处理日志
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('logArea').style.display=document.getElementById('logArea').style.display==='none'?'block':'none'">展开/折叠</button>
+    </div>
+    <div class="log-area" id="logArea">
+      <div><span class="log-ts">[15:27:42] </span><span class="log-ok">✓</span> 任务接收，文件上传完成 (18.2s, 72 MB/s)</div>
+      <div><span class="log-ts">[15:28:00] </span><span class="log-info">▶</span> 开始解码：H.265 1920×1080 @ 23.976fps</div>
+      <div><span class="log-ts">[15:28:22] </span><span class="log-ok">✓</span> 解码完成，共 34,186 帧</div>
+      <div><span class="log-ts">[15:28:22] </span><span class="log-info">▶</span> NAFNet 降噪 (strength=0.30, tile=256)</div>
+      <div><span class="log-ts">[15:28:22] </span><span class="log-info">  </span> 首次推理 warmup: CoreML 编译 ~3.8s</div>
+      <div><span class="log-ts">[15:30:10] </span><span class="log-ok">✓</span> NAFNet 完成：34,186帧 / 108s = 316.5 fps</div>
+      <div><span class="log-ts">[15:30:10] </span><span class="log-info">▶</span> RealESRGAN 超分 (scale=4, tile=512, model=x4plus)</div>
+      <div><span class="log-ts">[15:30:10] </span><span class="log-warn">⚠</span> 使用 .mlpackage (CoreML ANE), tile/frame ~1.69s × 12 = ~20s/frame</div>
+      <div><span class="log-ts">[15:32:14] </span><span class="log-ok">✓</span> RealESRGAN 完成：34,186帧 / 124s = 275.7 fps</div>
+      <div><span class="log-ts">[15:32:14] </span><span class="log-info">▶</span> 编码输出：H.265 3840×2160 CRF=16</div>
+      <div><span class="log-ts">[15:32:34] </span><span class="log-ok">✓</span> 编码完成，输出 1.4 GB</div>
+      <div><span class="log-ts">[15:32:34] </span><span class="log-ok">✓</span> <strong>任务完成</strong>，总耗时 4m32s</div>
+    </div>
+  </div>
+</div>
+</div>
+</body>
+</html>

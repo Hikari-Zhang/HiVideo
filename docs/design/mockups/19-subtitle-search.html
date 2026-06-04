@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>HiVideo · 在线字幕搜索</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  .page {
+    display: flex; flex-direction: column;
+    height: calc(100vh - 40px);
+    background: var(--surface-background);
+  }
+  /* 顶部 */
+  .sub-header {
+    height: var(--toolbar-height);
+    display: flex; align-items: center; gap: var(--sp-md);
+    padding: 0 var(--sp-xl);
+    border-bottom: 0.5px solid var(--border-default);
+    background: rgba(28,28,30,0.8); backdrop-filter: blur(20px);
+    flex-shrink: 0;
+  }
+  .video-info { flex: 1; }
+  .video-title { font-size: 15px; font-weight: 500; }
+  .video-meta  { font-size: 12px; color: var(--text-secondary); }
+  /* 搜索栏 */
+  .search-bar {
+    display: flex; align-items: center; gap: var(--sp-sm);
+    padding: var(--sp-md) var(--sp-xl);
+    border-bottom: 0.5px solid var(--border-default);
+    flex-shrink: 0; background: var(--surface-primary);
+  }
+  .search-bar input {
+    flex: 1; background: var(--surface-secondary);
+    border: 0.5px solid var(--border-default);
+    border-radius: var(--r-md); color: var(--text-primary);
+    font-size: 14px; padding: 7px var(--sp-sm); outline: none;
+    transition: border-color 0.15s;
+  }
+  .search-bar input:focus { border-color: var(--accent); }
+  /* 过滤器 */
+  .filter-row {
+    display: flex; gap: var(--sp-sm); align-items: center;
+    padding: var(--sp-xs) var(--sp-xl);
+    border-bottom: 0.5px solid var(--border-default);
+    flex-shrink: 0; flex-wrap: wrap;
+  }
+  .filter-chip {
+    padding: 4px 12px; border-radius: var(--r-full);
+    border: 0.5px solid var(--border-default);
+    background: transparent; color: var(--text-secondary);
+    font-size: 12px; cursor: pointer; transition: var(--anim-quick);
+  }
+  .filter-chip:hover  { background: var(--state-hover); }
+  .filter-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  /* 主体 */
+  .main-split { display: flex; flex: 1; overflow: hidden; }
+  /* 结果列表 */
+  .results-pane {
+    flex: 1; overflow-y: auto; padding: var(--sp-sm) 0;
+  }
+  .result-item {
+    display: flex; align-items: center; gap: var(--sp-md);
+    padding: var(--sp-sm) var(--sp-xl);
+    border-bottom: 0.5px solid var(--border-default);
+    cursor: pointer; transition: background 0.1s;
+  }
+  .result-item:hover    { background: var(--state-hover); }
+  .result-item.selected { background: var(--state-selected); }
+  /* 来源徽章 */
+  .source-badge {
+    width: 80px; flex-shrink: 0; text-align: center;
+    padding: 3px 8px; border-radius: var(--r-sm);
+    font-size: 11px; font-weight: 600;
+    background: var(--surface-secondary); color: var(--text-secondary);
+    border: 0.5px solid var(--border-default);
+  }
+  .source-badge.opensubtitles { background: rgba(10,132,255,0.15); color: var(--accent); border-color: rgba(10,132,255,0.3); }
+  .source-badge.assrt         { background: rgba(191,90,242,0.15); color: var(--char-0); border-color: rgba(191,90,242,0.3); }
+  .source-badge.zimuku        { background: rgba(48,209,88,0.15);  color: var(--functional-success); border-color: rgba(48,209,88,0.3); }
+  /* 结果信息 */
+  .result-info { flex: 1; min-width: 0; }
+  .result-name { font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .result-meta { font-size: 12px; color: var(--text-secondary); margin-top: 2px; display: flex; gap: var(--sp-sm); }
+  .result-lang { font-size: 12px; padding: 1px 6px; border-radius: 4px; background: var(--surface-secondary); color: var(--text-secondary); }
+  /* 评分 */
+  .result-score { flex-shrink: 0; text-align: right; }
+  .score-stars  { font-size: 12px; color: var(--functional-warning); }
+  .score-dl     { font-size: 11px; color: var(--text-tertiary); }
+  /* 操作 */
+  .result-action { flex-shrink: 0; }
+  /* 预览面板 */
+  .preview-pane {
+    width: 320px; flex-shrink: 0;
+    border-left: 0.5px solid var(--border-default);
+    display: flex; flex-direction: column;
+    background: var(--surface-primary);
+  }
+  .preview-header {
+    padding: var(--sp-md); border-bottom: 0.5px solid var(--border-default);
+    font-size: 14px; font-weight: 600; flex-shrink: 0;
+  }
+  .preview-meta { padding: var(--sp-xs) var(--sp-md); font-size: 12px; color: var(--text-secondary); border-bottom: 0.5px solid var(--border-default); flex-shrink: 0; }
+  .preview-meta div { margin-bottom: 3px; }
+  .preview-lines { flex: 1; overflow-y: auto; padding: var(--sp-sm); }
+  .sub-line {
+    padding: 5px var(--sp-sm); border-radius: var(--r-sm);
+    margin-bottom: 3px; cursor: pointer;
+    transition: background 0.1s;
+  }
+  .sub-line:hover { background: var(--state-hover); }
+  .sub-line-time { font-size: 10px; color: var(--text-tertiary); font-variant-numeric: tabular-nums; margin-bottom: 2px; }
+  .sub-line-text { font-size: 13px; line-height: 1.4; }
+  .sub-line-trans { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+  .preview-footer {
+    padding: var(--sp-sm) var(--sp-md); border-top: 0.5px solid var(--border-default); flex-shrink: 0;
+  }
+  /* 底部状态 */
+  .status-bar {
+    height: 36px; display: flex; align-items: center; padding: 0 var(--sp-xl);
+    border-top: 0.5px solid var(--border-default);
+    font-size: 12px; color: var(--text-tertiary); gap: var(--sp-md); flex-shrink: 0;
+  }
+</style>
+</head>
+<body>
+<nav class="mockup-nav">
+  <a class="nav-home" href="index.html">Mockups</a>
+  <span class="separator">/</span>
+  <span class="current">19 · 在线字幕搜索</span>
+</nav>
+<div class="mockup-body">
+<div class="page">
+  <!-- 顶部 -->
+  <div class="sub-header">
+    <button class="btn-icon" style="font-size:16px">←</button>
+    <div class="video-info">
+      <div class="video-title">四月是你的谎言 S01 E01.mkv</div>
+      <div class="video-meta">1920×1080 · 23:47 · 哈希：a3f82c1d</div>
+    </div>
+    <button class="btn btn-secondary btn-sm">⌘J 本地生成（Whisper）</button>
+  </div>
+
+  <!-- 搜索栏 -->
+  <div class="search-bar">
+    <span style="color:var(--text-tertiary)">🔍</span>
+    <input type="text" value="四月は君の嘘 S01E01" placeholder="搜索字幕…">
+    <select class="pref-select" style="background:var(--surface-secondary);border:0.5px solid var(--border-default);border-radius:var(--r-sm);color:var(--text-primary);font-size:13px;padding:5px var(--sp-xs);outline:none">
+      <option selected>全部来源</option>
+      <option>OpenSubtitles</option>
+      <option>射手 / Assrt</option>
+      <option>字幕库</option>
+    </select>
+    <button class="btn btn-primary btn-sm">搜索</button>
+  </div>
+
+  <!-- 过滤器 -->
+  <div class="filter-row">
+    <span style="font-size:12px;color:var(--text-tertiary);flex-shrink:0">语言：</span>
+    <div class="filter-chip active" onclick="toggleChip(this)">全部</div>
+    <div class="filter-chip" onclick="toggleChip(this)">简体中文</div>
+    <div class="filter-chip" onclick="toggleChip(this)">繁体中文</div>
+    <div class="filter-chip" onclick="toggleChip(this)">英文</div>
+    <div class="filter-chip" onclick="toggleChip(this)">日文</div>
+    <div class="divider-v" style="height:16px"></div>
+    <span style="font-size:12px;color:var(--text-tertiary);flex-shrink:0">排序：</span>
+    <div class="filter-chip active" onclick="toggleChip(this)">下载量</div>
+    <div class="filter-chip" onclick="toggleChip(this)">评分</div>
+    <div class="filter-chip" onclick="toggleChip(this)">最新</div>
+  </div>
+
+  <div class="main-split">
+    <!-- 结果列表 -->
+    <div class="results-pane">
+      <script>
+        const subs = [
+          { src:'opensubtitles', srcName:'OpenSubtitles', name:'四月是你的谎言 S01E01 简体中文', lang:'简体中文', dl:12480, rating:4.8, date:'2024-03-15', selected:true },
+          { src:'assrt', srcName:'Assrt', name:'四月是你的谎言 第01话 双语（简中/日）', lang:'简中/日双语', dl:8920, rating:4.6, date:'2024-02-28', selected:false },
+          { src:'zimuku', srcName:'字幕库', name:'KimiUso.S01E01.CHS.srt', lang:'简体中文', dl:5640, rating:4.2, date:'2024-01-10', selected:false },
+          { src:'opensubtitles', srcName:'OpenSubtitles', name:'四月は君の嘘 01話 繁體中文字幕', lang:'繁体中文', dl:3210, rating:3.9, date:'2023-11-20', selected:false },
+          { src:'assrt', srcName:'Assrt', name:'四月是你的谎言 第1话 日语原版', lang:'日文', dl:1850, rating:4.1, date:'2023-10-05', selected:false },
+          { src:'zimuku', srcName:'字幕库', name:'Your.Lie.in.April.S01E01.ENG.srt', lang:'英文', dl:980, rating:3.5, date:'2023-09-01', selected:false },
+        ];
+        const stars = r => '★'.repeat(Math.floor(r)) + (r%1>=0.5?'½':'') + '☆'.repeat(5-Math.ceil(r));
+        subs.forEach((s,i) => {
+          document.write(`
+          <div class="result-item${s.selected?' selected':''}" onclick="selectResult(this)">
+            <div class="source-badge ${s.src}">${s.srcName}</div>
+            <div class="result-info">
+              <div class="result-name">${s.name}</div>
+              <div class="result-meta">
+                <span class="result-lang">${s.lang}</span>
+                <span>${s.date}</span>
+              </div>
+            </div>
+            <div class="result-score">
+              <div class="score-stars">${stars(s.rating)}</div>
+              <div class="score-dl">↓ ${s.dl.toLocaleString()}</div>
+            </div>
+            <div class="result-action">
+              <button class="btn ${s.selected?'btn-primary':'btn-secondary'} btn-sm" onclick="event.stopPropagation()">
+                ${s.selected?'✓ 已选':'下载'}
+              </button>
+            </div>
+          </div>`);
+        });
+      </script>
+    </div>
+
+    <!-- 预览面板 -->
+    <div class="preview-pane">
+      <div class="preview-header">预览：四月是你的谎言 S01E01 简体中文</div>
+      <div class="preview-meta">
+        <div>来源：OpenSubtitles · ↓ 12,480 · ★★★★★ 4.8</div>
+        <div>格式：SRT · 1,243 条 · UTF-8</div>
+        <div style="color:var(--functional-success)">✓ 哈希匹配（高置信度）</div>
+      </div>
+      <div class="preview-lines">
+        <script>
+          const lines = [
+            { t:'00:01:23,400', text:'演奏是什么感觉？', trans:'演奏ってどんな感じ？' },
+            { t:'00:01:26,800', text:'就像一直在黑暗中弹奏', trans:'ずっと暗闇の中で弾いてる感じ' },
+            { t:'00:01:30,000', text:'你好，有马君', trans:'こんにちは、有馬くん' },
+            { t:'00:01:33,400', text:'啊，宫园同学！', trans:'あっ、宮園さん！' },
+            { t:'00:01:36,200', text:'好久不见，还在弹琴吗？', trans:'久しぶりだね、ピアノ弾いてる？' },
+            { t:'00:01:39,400', text:'嗯，只是稍微弹弹', trans:'うん、ちょっとだけね' },
+          ];
+          lines.forEach(l => {
+            document.write(`
+            <div class="sub-line">
+              <div class="sub-line-time">${l.t}</div>
+              <div class="sub-line-text">${l.text}</div>
+              <div class="sub-line-trans">${l.trans}</div>
+            </div>`);
+          });
+        </script>
+      </div>
+      <div class="preview-footer">
+        <button class="btn btn-primary" style="width:100%">下载并应用此字幕</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="status-bar">
+    <span>共找到 <strong style="color:var(--text-primary)">6</strong> 条结果</span>
+    <span>·</span>
+    <span>搜索耗时 0.32s</span>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:4px">
+      <div class="dot dot-online"></div>
+      <span>OpenSubtitles · Assrt · 字幕库 已连接</span>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+function selectResult(row) {
+  document.querySelectorAll('.result-item').forEach(r => {
+    r.classList.remove('selected');
+    const btn = r.querySelector('.result-action .btn');
+    if (btn) { btn.className = 'btn btn-secondary btn-sm'; btn.textContent = '下载'; }
+  });
+  row.classList.add('selected');
+  const btn = row.querySelector('.result-action .btn');
+  if (btn) { btn.className = 'btn btn-primary btn-sm'; btn.textContent = '✓ 已选'; }
+}
+function toggleChip(chip) {
+  chip.classList.toggle('active');
+}
+</script>
+</body>
+</html>

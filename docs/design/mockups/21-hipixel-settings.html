@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>HiPixel · 用户设置</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  body { background: var(--hipixel-surface); overflow-y: auto; height: auto; }
+  .hp-nav {
+    height: 60px; display: flex; align-items: center;
+    padding: 0 var(--sp-xl); gap: var(--sp-md);
+    border-bottom: 1px solid var(--hipixel-border);
+    background: rgba(17,24,39,0.95);
+    position: sticky; top: 0; z-index: 10;
+  }
+  .hp-logo { font-size: 17px; font-weight: 700; color: var(--hipixel-primary); }
+  .page-layout { display: flex; min-height: calc(100vh - 60px - 40px); }
+  /* 侧边导航 */
+  .settings-nav {
+    width: 220px; flex-shrink: 0;
+    border-right: 1px solid var(--hipixel-border);
+    padding: var(--sp-md) 0;
+  }
+  .nav-section-title {
+    padding: var(--sp-xs) var(--sp-md);
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--text-tertiary);
+    margin-bottom: 2px;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: var(--sp-sm);
+    padding: 8px var(--sp-md); cursor: pointer;
+    color: var(--text-secondary); font-size: 14px;
+    transition: background 0.1s; border-left: 2px solid transparent;
+    margin: 1px 0;
+  }
+  .nav-item:hover  { background: rgba(255,255,255,0.04); color: var(--text-primary); }
+  .nav-item.active { background: rgba(139,92,246,0.1); color: var(--hipixel-primary); border-left-color: var(--hipixel-primary); }
+  /* 内容 */
+  .settings-content { flex: 1; padding: var(--sp-xxl); max-width: 700px; }
+  .settings-title { font-size: 24px; font-weight: 700; margin-bottom: var(--sp-xl); }
+  /* 卡片 */
+  .s-card {
+    background: var(--hipixel-card);
+    border: 1px solid var(--hipixel-border);
+    border-radius: var(--r-lg); overflow: hidden;
+    margin-bottom: var(--sp-md);
+  }
+  .s-card-title {
+    padding: var(--sp-sm) var(--sp-md);
+    font-size: 12px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--text-tertiary);
+    background: rgba(255,255,255,0.03);
+    border-bottom: 1px solid var(--hipixel-border);
+  }
+  .s-row {
+    display: flex; align-items: center; gap: var(--sp-md);
+    padding: var(--sp-sm) var(--sp-md);
+    border-bottom: 1px solid var(--hipixel-border);
+    min-height: 52px;
+  }
+  .s-row:last-child { border-bottom: none; }
+  .s-row-label { flex: 1; }
+  .s-label { font-size: 14px; color: var(--text-primary); }
+  .s-desc  { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+  .s-control { flex-shrink: 0; display: flex; align-items: center; gap: var(--sp-xs); }
+  .hp-select {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--hipixel-border);
+    border-radius: var(--r-sm); color: var(--text-primary);
+    font-size: 13px; padding: 5px var(--sp-xs); outline: none; cursor: pointer;
+  }
+  /* 配额环 */
+  .quota-ring {
+    width: 80px; height: 80px; flex-shrink: 0;
+    position: relative;
+  }
+  .quota-ring svg { transform: rotate(-90deg); }
+  .quota-ring .ring-bg    { fill: none; stroke: rgba(255,255,255,0.08); stroke-width: 6; }
+  .quota-ring .ring-fill  { fill: none; stroke: var(--hipixel-primary); stroke-width: 6; stroke-linecap: round; }
+  .quota-label {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .quota-pct  { font-size: 18px; font-weight: 700; color: var(--hipixel-primary); line-height: 1; }
+  .quota-unit { font-size: 10px; color: var(--text-tertiary); }
+  /* 用户 Hero */
+  .user-hero {
+    display: flex; align-items: center; gap: var(--sp-lg);
+    padding: var(--sp-xl); margin-bottom: var(--sp-xl);
+    background: var(--hipixel-card);
+    border: 1px solid var(--hipixel-border);
+    border-radius: var(--r-xl);
+  }
+  .user-avatar {
+    width: 64px; height: 64px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--hipixel-primary), var(--char-0));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; font-weight: 700; color: #fff;
+  }
+  .plan-badge {
+    display: inline-block; padding: 3px 10px; border-radius: var(--r-full);
+    font-size: 11px; font-weight: 700; letter-spacing: 0.05em;
+    background: rgba(139,92,246,0.2); color: var(--hipixel-primary);
+    border: 1px solid rgba(139,92,246,0.4);
+    margin-left: var(--sp-xs);
+  }
+  /* API Key */
+  .key-row {
+    display: flex; align-items: center; gap: var(--sp-sm);
+  }
+  .key-val {
+    flex: 1; background: rgba(0,0,0,0.3);
+    border: 1px solid var(--hipixel-border);
+    border-radius: var(--r-sm);
+    padding: 6px var(--sp-sm); font-family: 'SF Mono', monospace;
+    font-size: 12px; color: var(--text-secondary);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+<nav class="mockup-nav">
+  <a class="nav-home" href="index.html">Mockups</a>
+  <span class="separator">/</span>
+  <span class="current">21 · HiPixel 用户设置</span>
+</nav>
+<div class="mockup-body" style="overflow:auto">
+<nav class="hp-nav">
+  <div class="hp-logo">⚡ HiPixel</div>
+  <div style="flex:1"></div>
+  <div style="width:32px;height:32px;border-radius:50%;background:var(--hipixel-primary);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700">H</div>
+</nav>
+
+<div class="page-layout">
+  <!-- 侧边导航 -->
+  <div class="settings-nav">
+    <div class="nav-section-title">账户</div>
+    <div class="nav-item active" onclick="showSection('account',this)"><span>👤</span>账户与配额</div>
+    <div class="nav-item" onclick="showSection('billing',this)"><span>💳</span>订阅与计费</div>
+    <div class="nav-item" onclick="showSection('api',this)"><span>🔑</span>API 访问</div>
+    <div class="nav-section-title" style="margin-top:var(--sp-sm)">处理设置</div>
+    <div class="nav-item" onclick="showSection('processing',this)"><span>⚙</span>处理偏好</div>
+    <div class="nav-item" onclick="showSection('nodes',this)"><span>🖥</span>关联节点</div>
+    <div class="nav-section-title" style="margin-top:var(--sp-sm)">其他</div>
+    <div class="nav-item" onclick="showSection('notifications',this)"><span>🔔</span>通知</div>
+    <div class="nav-item" onclick="showSection('privacy',this)"><span>🔒</span>隐私</div>
+  </div>
+
+  <!-- 内容区 -->
+  <div class="settings-content">
+
+    <!-- 账户与配额 -->
+    <div id="sec-account">
+      <div class="settings-title">账户与配额</div>
+      <!-- 用户信息 -->
+      <div class="user-hero">
+        <div class="user-avatar">H</div>
+        <div style="flex:1">
+          <div style="font-size:18px;font-weight:600;margin-bottom:3px">
+            Hikari Zhang
+            <span class="plan-badge">PRO</span>
+          </div>
+          <div style="font-size:14px;color:var(--text-secondary)">hikari@example.com</div>
+          <div style="font-size:12px;color:var(--text-tertiary);margin-top:4px">会员自 2026-01-01 · 下次续费 2027-01-01</div>
+        </div>
+        <button class="btn btn-secondary btn-sm">编辑资料</button>
+      </div>
+
+      <!-- 配额使用 -->
+      <div class="s-card">
+        <div class="s-card-title">本月配额使用</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:var(--sp-md);padding:var(--sp-md)">
+          <!-- GPU 时间 -->
+          <div style="text-align:center">
+            <div class="quota-ring" style="margin:0 auto var(--sp-xs)">
+              <svg viewBox="0 0 80 80" width="80" height="80">
+                <circle class="ring-bg" cx="40" cy="40" r="32"/>
+                <circle class="ring-fill" cx="40" cy="40" r="32" stroke-dasharray="201" stroke-dashoffset="72"/>
+              </svg>
+              <div class="quota-label">
+                <div class="quota-pct">64%</div>
+                <div class="quota-unit">GPU</div>
+              </div>
+            </div>
+            <div style="font-size:13px;font-weight:600">192 / 300 分钟</div>
+            <div style="font-size:11px;color:var(--text-tertiary)">GPU 处理时间</div>
+          </div>
+          <!-- 文件大小 -->
+          <div style="text-align:center">
+            <div class="quota-ring" style="margin:0 auto var(--sp-xs)">
+              <svg viewBox="0 0 80 80" width="80" height="80">
+                <circle class="ring-bg" cx="40" cy="40" r="32"/>
+                <circle class="ring-fill" cx="40" cy="40" r="32" stroke-dasharray="201" stroke-dashoffset="121" style="stroke:var(--functional-success)"/>
+              </svg>
+              <div class="quota-label">
+                <div class="quota-pct" style="color:var(--functional-success)">40%</div>
+                <div class="quota-unit">存储</div>
+              </div>
+            </div>
+            <div style="font-size:13px;font-weight:600">40 / 100 GB</div>
+            <div style="font-size:11px;color:var(--text-tertiary)">临时存储空间</div>
+          </div>
+          <!-- 任务数 -->
+          <div style="text-align:center">
+            <div class="quota-ring" style="margin:0 auto var(--sp-xs)">
+              <svg viewBox="0 0 80 80" width="80" height="80">
+                <circle class="ring-bg" cx="40" cy="40" r="32"/>
+                <circle class="ring-fill" cx="40" cy="40" r="32" stroke-dasharray="201" stroke-dashoffset="159" style="stroke:var(--functional-warning)"/>
+              </svg>
+              <div class="quota-label">
+                <div class="quota-pct" style="color:var(--functional-warning)">21%</div>
+                <div class="quota-unit">任务</div>
+              </div>
+            </div>
+            <div style="font-size:13px;font-weight:600">21 / 100 次</div>
+            <div style="font-size:11px;color:var(--text-tertiary)">月度任务次数</div>
+          </div>
+        </div>
+        <div style="padding:var(--sp-sm) var(--sp-md) var(--sp-md);border-top:1px solid var(--hipixel-border);display:flex;align-items:center;justify-content:space-between">
+          <div style="font-size:13px;color:var(--text-secondary)">配额将于 <strong style="color:var(--text-primary)">2026-07-01</strong> 重置</div>
+          <button class="btn btn-sm" style="background:var(--hipixel-primary);color:#fff">升级计划 →</button>
+        </div>
+      </div>
+
+      <!-- 计划对比 -->
+      <div class="s-card">
+        <div class="s-card-title">当前计划</div>
+        <div class="s-row">
+          <div class="s-row-label"><div class="s-label">PRO 计划</div><div class="s-desc">¥68 / 月 · 按年付费</div></div>
+          <div class="s-control"><button class="btn btn-secondary btn-sm">管理订阅</button></div>
+        </div>
+        <div class="s-row">
+          <div class="s-row-label"><div class="s-label">GPU 时间</div></div>
+          <div class="s-control"><span style="font-size:14px;font-weight:600">300 分钟 / 月</span></div>
+        </div>
+        <div class="s-row">
+          <div class="s-row-label"><div class="s-label">最大文件大小</div></div>
+          <div class="s-control"><span style="font-size:14px;font-weight:600">10 GB</span></div>
+        </div>
+        <div class="s-row">
+          <div class="s-row-label"><div class="s-label">并发任务</div></div>
+          <div class="s-control"><span style="font-size:14px;font-weight:600">3 个</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- API 访问 -->
+    <div id="sec-api" style="display:none">
+      <div class="settings-title">API 访问</div>
+      <div class="s-card">
+        <div class="s-card-title">API Key</div>
+        <div class="s-row">
+          <div class="s-row-label">
+            <div class="s-label">API Key</div>
+            <div class="s-desc">用于调用 HiPixel API，请勿分享</div>
+          </div>
+        </div>
+        <div style="padding:0 var(--sp-md) var(--sp-md)">
+          <div class="key-row">
+            <div class="key-val" id="apiKey">hipx_prod_••••••••••••••••••••••••••••••••</div>
+            <button class="btn btn-secondary btn-sm" onclick="toggleKey()">显示</button>
+            <button class="btn btn-secondary btn-sm">复制</button>
+            <button class="btn btn-destructive btn-sm">重新生成</button>
+          </div>
+        </div>
+      </div>
+      <div class="s-card">
+        <div class="s-card-title">使用限额</div>
+        <div class="s-row">
+          <div class="s-row-label"><div class="s-label">API 调用速率限制</div></div>
+          <div class="s-control"><span style="font-size:14px;color:var(--text-secondary)">60 次 / 分钟</span></div>
+        </div>
+        <div class="s-row">
+          <div class="s-row-label"><div class="s-label">本月 API 调用次数</div></div>
+          <div class="s-control"><span style="font-size:14px;font-weight:600">1,248</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 处理偏好 -->
+    <div id="sec-processing" style="display:none">
+      <div class="settings-title">处理偏好</div>
+      <div class="s-card">
+        <div class="s-card-title">默认设置</div>
+        <div class="s-row">
+          <div class="s-row-label"><div class="s-label">默认预设</div></div>
+          <div class="s-control">
+            <select class="hp-select">
+              <option selected>自动（根据内容类型）</option>
+              <option>番剧增强</option>
+              <option>老片救星</option>
+              <option>最快速度</option>
+            </select>
+          </div>
+        </div>
+        <div class="s-row">
+          <div class="s-row-label"><div class="s-label">输出格式</div></div>
+          <div class="s-control">
+            <select class="hp-select">
+              <option selected>与输入相同</option>
+              <option>MP4 (H.265)</option>
+              <option>MKV (H.265)</option>
+            </select>
+          </div>
+        </div>
+        <div class="s-row">
+          <div class="s-row-label">
+            <div class="s-label">任务完成后自动删除源文件</div>
+            <div class="s-desc">处理完成并下载后从服务器删除原始上传</div>
+          </div>
+          <div class="s-control"><label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label></div>
+        </div>
+        <div class="s-row">
+          <div class="s-row-label">
+            <div class="s-label">输出文件保留时间</div>
+          </div>
+          <div class="s-control">
+            <select class="hp-select">
+              <option>24 小时</option>
+              <option selected>7 天</option>
+              <option>30 天</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 通知 -->
+    <div id="sec-notifications" style="display:none">
+      <div class="settings-title">通知</div>
+      <div class="s-card">
+        <div class="s-card-title">通知方式</div>
+        <div class="s-row">
+          <div class="s-row-label"><div class="s-label">任务完成时浏览器通知</div></div>
+          <div class="s-control"><label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label></div>
+        </div>
+        <div class="s-row">
+          <div class="s-row-label"><div class="s-label">任务失败时邮件通知</div></div>
+          <div class="s-control"><label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label></div>
+        </div>
+        <div class="s-row">
+          <div class="s-row-label">
+            <div class="s-label">配额剩余不足 20% 时提醒</div>
+          </div>
+          <div class="s-control"><label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+const sections = ['account','billing','api','processing','nodes','notifications','privacy'];
+function showSection(id, nav) {
+  sections.forEach(s => {
+    const el = document.getElementById('sec-' + s);
+    if (el) el.style.display = s === id ? '' : 'none';
+  });
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  nav.classList.add('active');
+}
+let keyVisible = false;
+function toggleKey() {
+  keyVisible = !keyVisible;
+  document.getElementById('apiKey').textContent = keyVisible
+    ? 'hipx_prod_sk_a3f82c1d9e4b7f2a0c8d5e1f6b3a9c7d'
+    : 'hipx_prod_••••••••••••••••••••••••••••••••';
+  event.target.textContent = keyVisible ? '隐藏' : '显示';
+}
+</script>
+</body>
+</html>
