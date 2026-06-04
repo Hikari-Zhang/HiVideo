@@ -160,26 +160,82 @@
 
 ---
 
+## HTML 视觉稿完成状态（`docs/design/mockups/`）
+
+> 可直接在浏览器打开 `index.html` 查看全套可交互视觉稿。
+
+| # | 文件 | 界面 | 状态 |
+|---|------|------|------|
+| 01 | `01-launch.html` | 启动屏 | ✅ |
+| 02 | `02-media-library.html` | 媒体库主窗口（三栏 + 三视图 + 详情面板）| ✅ |
+| 03 | `03-player.html` | 沉浸式播放器 + 控制条 | ✅ |
+| 04 | `04-command-palette.html` | ⌘K 命令面板 | ✅ |
+| 05 | `05-character.html` | 角色系统（网格 + 详情页）| ✅ |
+| 06 | `06-variant-picker.html` | 副本选择弹窗 + 删除安全网 Toast | ✅ |
+| 07 | `08-enhancement.html` | 画质增强 + 音频增强浮窗 | ✅ |
+| 08 | `10-node-settings.html` | 算力节点设置 + SMB 网盘向导 | ✅ |
+| 09 | `11-subtitle-editor.html` | 字幕编辑器（三栏）| ✅ |
+| 10 | `12-hipixel-upload.html` | HiPixel 上传屏 | ✅ |
+| 11 | `13-hipixel-queue.html` | HiPixel 任务队列 | ✅ |
+| 12 | `14-hipixel-compare.html` | HiPixel 前后对比屏 | ✅ |
+| 13 | `15-hipixel-windows.html` | HiPixel Windows 安装向导 + 托盘 | ✅ |
+| 14 | `16-preferences.html` | 偏好设置（12 个分类）| ✅ |
+
+---
+
+## ⏳ 待补充视觉稿（HTML Mockup Backlog）
+
+按优先级排序，后续直接在 `mockups/` 目录下新建对应 HTML 文件。
+
+### 🔴 P0（Phase 1 启动前需完成）
+
+| 序号 | 界面 | 说明 | 目标文件名 |
+|------|------|------|-----------|
+| 1 | **⌘/ 快捷键速查面板** | 弹出当前上下文可用快捷键卡片，上下文感知（播放中 / 媒体库 / 字幕编辑三套） | `17-shortcut-cheatsheet.html` |
+| 2 | **媒体库·空态 / 加载 / 错误** | 首次打开无视频的空态、后台扫描转圈、扫描出错提示 | 合并入 `02-media-library.html` 新增 Tab |
+
+### 🟡 P1（对应 Phase 启动前需完成）
+
+| 序号 | 界面 | 说明 | 目标文件名 | 对应 Phase |
+|------|------|------|-----------|-----------|
+| 3 | **未知角色命名弹窗** | 识别到新角色后弹出：人脸缩略图组 + 输入框 + TMDB 候选列表 + 拆分按钮 | `18-character-naming.html` | Phase 5 |
+| 4 | **误聚类拆分流程** | 角色详情页识别样本 Tab → 多选错误片段 → 确认拆分弹窗 → 负样本反馈 | 合并入 `05-character.html` 新增交互 | Phase 5 |
+| 5 | **在线字幕搜索结果列表** | 来源 / 语言 / 下载量 / 评分 / 上传时间，一键下载，错误提示 | `19-subtitle-search.html` | Phase 6 |
+| 6 | **网盘诊断面板** | 选中网盘后弹出详情：RTT / 带宽 / 错误日志 / 重连 / 吊销 | 合并入 `10-node-settings.html` 侧边展开 | Phase 7 |
+| 7 | **HiPixel · 任务详情页** | 单任务展开：参数详情 / 分阶段处理日志 / 关键帧预览 / 重试选项 | `20-hipixel-task-detail.html` | Phase 2 |
+| 8 | **HiPixel · 用户设置 / 配额** | 账户信息 / 剩余 GPU 分钟配额 / 订阅计划 / API Key | `21-hipixel-settings.html` | Phase 2 |
+
+### 🟢 P2（可选，后续迭代补充）
+
+| 序号 | 界面 | 说明 | 目标文件名 | 对应 Phase |
+|------|------|------|-----------|-----------|
+| 9 | **角色对手戏 / 高光集锦页** | 两角色共同出场片段列表；3 分钟自动混剪预览 | `22-character-duet.html` | Phase 5 |
+| 10 | **HiPixel · 暗色模式适配** | Web 全站深色主题细化（目前为浅色草稿）| 更新现有 HiPixel 文件 | Phase 2 |
+| 11 | **HiPixel · 移动端响应式** | < 768px 断点下的布局：单列、预设横向滚动 | 更新现有 HiPixel 文件 | Phase 2 |
+
+---
+
 ## 待 Figma 设计师完成的工作
 
-按优先级排序：
+按优先级排序（HTML 视觉稿已完成，仍需 Figma 高保真像素稿）：
 
 ### 🔴 P0（Phase 1 直接需要）
 1. 主窗口框架（三栏布局）高保真稿
 2. 媒体库·网格视图
 3. 播放器（含控制条）
 4. 启动屏
+5. 偏好设置
 
 ### 🟡 P1（Phase 1 后半段）
-5. 视频详情面板（含 4 个 Tab）
-6. ⌘K 命令面板
-7. 媒体库·列表视图
-8. 删除安全网 Toast
+6. 视频详情面板（含 4 个 Tab）
+7. ⌘K 命令面板
+8. ⌘/ 快捷键速查面板
+9. 删除安全网 Toast
 
 ### 🟢 P2（后续 Phase 启动前完成）
-9. 角色系统界面（Phase 5 前）
-10. HiPixel Web 三屏（Phase 2 前）
-11. 其余高频交互弹窗
+10. 角色系统界面（Phase 5 前）
+11. HiPixel Web 三屏（Phase 2 前）
+12. 其余高频交互弹窗
 
 ---
 

@@ -86,6 +86,17 @@
 
 <div class="section-title">HiVideo · 核心界面</div>
 <div class="grid">
+  <a class="mockup-card" href="16-preferences.html">
+    <div class="thumb" style="background: linear-gradient(135deg, #1C1C1E, #252528);">
+      ⚙
+      <span class="thumb-label">偏好设置</span>
+    </div>
+    <div class="card-body">
+      <div class="card-title">偏好设置</div>
+      <div class="card-desc">通用 · 外观 · 播放 · AI · 快捷键 · 存储 · 隐私</div>
+      <span class="tag tag-p0">P0 · Phase 1</span>
+    </div>
+  </a>
   <a class="mockup-card" href="01-launch.html">
     <div class="thumb" style="background: radial-gradient(circle at 50% 40%, #252528, #0A0A0A);">
       ▶
@@ -262,5 +273,48 @@
 </div>
 
 <div style="height: var(--sp-xxxl);"></div>
+
+<!-- ═══════════════════════════════════════════════════════
+     待完成视觉稿清单
+     ═══════════════════════════════════════════════════════ -->
+<div class="section-title" style="margin-top: var(--sp-xl)">⏳ 待完成视觉稿</div>
+<div style="padding: 0 var(--sp-xxxl) var(--sp-xxxl);">
+  <table style="width:100%;border-collapse:collapse;font-size:13px;">
+    <thead>
+      <tr style="border-bottom:0.5px solid var(--border-default);">
+        <th style="text-align:left;padding:var(--sp-xs) var(--sp-sm);color:var(--text-tertiary);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.05em">界面</th>
+        <th style="text-align:left;padding:var(--sp-xs) var(--sp-sm);color:var(--text-tertiary);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.05em">说明</th>
+        <th style="text-align:left;padding:var(--sp-xs) var(--sp-sm);color:var(--text-tertiary);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.05em">优先级</th>
+        <th style="text-align:left;padding:var(--sp-xs) var(--sp-sm);color:var(--text-tertiary);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.05em">关联 Phase</th>
+      </tr>
+    </thead>
+    <tbody>
+      <script>
+        const pending = [
+          { name:'⌘/ 快捷键速查面板', desc:'弹出当前上下文可用快捷键卡片，上下文感知（播放中/媒体库/字幕编辑）', pri:'p0', phase:'Phase 1' },
+          { name:'媒体库·空状态', desc:'首次打开无视频时的空态、加载中转圈态、扫描出错提示态', pri:'p1', phase:'Phase 1' },
+          { name:'未知角色命名弹窗', desc:'识别到新角色后弹出：人脸缩略图 + 输入框 + TMDB 候选列表', pri:'p1', phase:'Phase 5' },
+          { name:'误聚类拆分流程', desc:'角色详情页识别样本 Tab → 多选错误片段 → 确认拆分 → 负样本反馈', pri:'p1', phase:'Phase 5' },
+          { name:'在线字幕搜索结果列表', desc:'字幕来源 / 语言 / 下载量 / 评分 / 上传时间，可点击下载', pri:'p1', phase:'Phase 6' },
+          { name:'网盘诊断面板', desc:'选中网盘后的详细诊断：延迟 / 带宽 / 错误日志 / 重连按钮', pri:'p1', phase:'Phase 7' },
+          { name:'HiPixel · 任务详情页', desc:'单任务展开页：参数详情 / 处理日志 / 关键帧预览 / 重试选项', pri:'p1', phase:'Phase 2' },
+          { name:'HiPixel · 用户设置 / 配额', desc:'账户信息 / 剩余 GPU 分钟配额 / 订阅计划 / 团队管理', pri:'p1', phase:'Phase 2' },
+          { name:'角色对手戏 / 高光集锦页', desc:'两角色共同出场片段列表；自动剪辑某角色的 3 分钟混剪', pri:'p2', phase:'Phase 5' },
+          { name:'HiPixel · 暗色模式适配', desc:'Web 全站深色主题（目前仅有深色草稿）', pri:'p2', phase:'Phase 2' },
+          { name:'HiPixel · 移动端响应式', desc:'< 768px 断点下的布局变化（单列、横向滚动预设）', pri:'p2', phase:'Phase 2' },
+        ];
+        const priLabel = { p0:'<span class="tag tag-p0">🔴 P0</span>', p1:'<span class="tag tag-p1">🟡 P1</span>', p2:'<span class="tag tag-p2">🟢 P2</span>' };
+        pending.forEach(p => {
+          document.write(`<tr style="border-bottom:0.5px solid var(--border-default);">
+            <td style="padding:var(--sp-sm);font-weight:500;color:var(--text-primary)">${p.name}</td>
+            <td style="padding:var(--sp-sm);color:var(--text-secondary)">${p.desc}</td>
+            <td style="padding:var(--sp-sm)">${priLabel[p.pri]}</td>
+            <td style="padding:var(--sp-sm);color:var(--text-tertiary)">${p.phase}</td>
+          </tr>`);
+        });
+      </script>
+    </tbody>
+  </table>
+</div>
 </body>
 </html>
