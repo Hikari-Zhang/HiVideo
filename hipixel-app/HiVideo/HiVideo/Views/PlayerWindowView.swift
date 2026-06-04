@@ -4,6 +4,8 @@
 import SwiftUI
 import AVKit
 import PlaybackKit
+
+struct PlayerWindowView: View {
     @EnvironmentObject var player: HiVideoPlayer
     @EnvironmentObject var playerState: PlayerStateObject
 
