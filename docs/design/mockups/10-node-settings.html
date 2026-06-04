@@ -2,8 +2,638 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>HiVideo · 算力节点 + 网盘向导</title>
+<title>HiVideo · 算力节点 + 网盘诊断</title>
 <link rel="stylesheet" href="tokens.css">
+<style>
+  body { overflow-y: auto; height: auto; }
+  .page-wrap {
+    min-height: calc(100vh - 40px);
+    background: var(--surface-background);
+    display: flex; flex-direction: column;
+  }
+
+  /* ── 页面 Tab 栏 ── */
+  .page-tabs {
+    display: flex; gap: 0;
+    border-bottom: 0.5px solid var(--border-default);
+    padding: 0 var(--sp-xxl);
+    background: var(--surface-primary); flex-shrink: 0;
+  }
+  .ptab {
+    padding: var(--sp-sm) var(--sp-md); font-size: 15px; cursor: pointer;
+    color: var(--text-secondary); border-bottom: 2px solid transparent;
+    margin-bottom: -0.5px; transition: color 0.15s;
+    display: flex; align-items: center; gap: var(--sp-xs);
+  }
+  .ptab:hover  { color: var(--text-primary); }
+  .ptab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 500; }
+
+  /* ── 共用 demo 包裹 ── */
+  .demo-wrap {
+    display: flex; gap: var(--sp-xxl); padding: var(--sp-xxl);
+    align-items: flex-start; justify-content: center; flex: 1;
+  }
+
+  /* ── 节点设置（原有样式保留）── */
+  .settings-page { width: 480px; }
+  .page-title { font-size: 22px; font-weight: 400; margin-bottom: var(--sp-xs); }
+  .page-desc  { font-size: 14px; color: var(--text-secondary); margin-bottom: var(--sp-xl); }
+  .node-card {
+    background: var(--surface-primary);
+    border: 0.5px solid var(--border-default);
+    border-radius: var(--r-lg); overflow: hidden;
+    margin-bottom: var(--sp-sm); cursor: pointer;
+    transition: var(--anim-default);
+  }
+  .node-card:hover { border-color: var(--border-strong); }
+  .node-header {
+    display: flex; align-items: center; gap: var(--sp-sm);
+    padding: var(--sp-md);
+  }
+  .node-icon { font-size: 22px; flex-shrink: 0; }
+  .node-name { font-size: 15px; font-weight: 500; flex: 1; }
+  .node-rttt { font-size: 12px; color: var(--text-tertiary); }
+  .node-more { background: transparent; border: none; color: var(--text-tertiary); font-size: 18px; cursor: pointer; padding: 4px; }
+  .node-body { padding: 0 var(--sp-md) var(--sp-md); border-top: 0.5px solid var(--border-default); display: none; }
+  .node-card.expanded .node-body { display: block; }
+  .node-spec { font-size: 13px; color: var(--text-secondary); padding: var(--sp-sm) 0; border-bottom: 0.5px solid var(--border-default); }
+  .perf-row { display: flex; align-items: center; gap: var(--sp-xs); margin-bottom: 6px; padding-top: var(--sp-xs); }
+  .perf-label { font-size: 12px; color: var(--text-secondary); width: 52px; flex-shrink: 0; }
+  .perf-bar { flex:1; height: 4px; background: var(--surface-secondary); border-radius: var(--r-full); overflow: hidden; }
+  .perf-fill { height: 100%; border-radius: var(--r-full); }
+  .perf-val { font-size: 11px; color: var(--text-tertiary); width: 44px; text-align: right; flex-shrink: 0; }
+  .node-actions { display: flex; gap: var(--sp-xs); padding-top: var(--sp-sm); }
+  .add-btn {
+    display: flex; align-items: center; justify-content: center; gap: var(--sp-xs);
+    width: 100%; height: 44px;
+    border: 1.5px dashed var(--border-strong);
+    border-radius: var(--r-lg); cursor: pointer;
+    color: var(--accent); font-size: 14px;
+    transition: var(--anim-default);
+  }
+  .add-btn:hover { background: rgba(10,132,255,0.05); border-color: var(--accent); }
+
+  /* ── SMB 向导（原有样式保留）── */
+  .wizard { width: 440px; }
+  .wizard-card {
+    background: var(--surface-elevated);
+    border: 0.5px solid var(--border-strong);
+    border-radius: var(--r-xl); box-shadow: var(--shadow-lg);
+    overflow: hidden;
+  }
+  .wizard-header {
+    padding: var(--sp-md) var(--sp-xl);
+    border-bottom: 0.5px solid var(--border-default);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .step-dots { display: flex; gap: var(--sp-xs); align-items: center; }
+  .step-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--surface-secondary); transition: background 0.2s; }
+  .step-dot.active { background: var(--accent); width: 20px; border-radius: 4px; }
+  .step-dot.done   { background: var(--functional-success); }
+  .wizard-body { padding: var(--sp-xl); }
+  .wizard-step { display: none; }
+  .wizard-step.active { display: block; }
+  .wizard-title { font-size: 17px; font-weight: 600; margin-bottom: var(--sp-xs); }
+  .wizard-desc  { font-size: 14px; color: var(--text-secondary); margin-bottom: var(--sp-md); }
+  .option-list { display: flex; flex-direction: column; gap: var(--sp-xs); margin-bottom: var(--sp-md); }
+  .option-item {
+    display: flex; align-items: center; gap: var(--sp-sm);
+    padding: var(--sp-sm) var(--sp-md); border-radius: var(--r-md);
+    border: 0.5px solid var(--border-default); cursor: pointer;
+    transition: var(--anim-quick);
+  }
+  .option-item:hover    { background: var(--state-hover); }
+  .option-item.selected { border-color: var(--accent); background: rgba(10,132,255,0.08); }
+  .option-icon  { font-size: 18px; width: 24px; text-align: center; }
+  .option-label { font-size: 14px; font-weight: 500; }
+  .option-desc  { font-size: 12px; color: var(--text-secondary); }
+  .form-group { margin-bottom: var(--sp-sm); }
+  .form-label { font-size: 13px; color: var(--text-secondary); margin-bottom: 4px; }
+  .test-result { display: flex; align-items: center; gap: var(--sp-xs); font-size: 13px; margin-top: var(--sp-sm); color: var(--functional-success); }
+  .dir-tree { background: var(--surface-secondary); border-radius: var(--r-md); padding: var(--sp-sm); max-height: 180px; overflow-y: auto; margin-bottom: var(--sp-md); }
+  .dir-item { display: flex; align-items: center; gap: 6px; padding: 4px var(--sp-xs); border-radius: var(--r-sm); cursor: pointer; font-size: 13px; transition: background 0.1s; }
+  .dir-item:hover    { background: var(--state-hover); }
+  .dir-item.selected { background: rgba(10,132,255,0.15); color: var(--accent); }
+  .dir-indent { padding-left: 20px; }
+  .wizard-footer { padding: var(--sp-md) var(--sp-xl); border-top: 0.5px solid var(--border-default); display: flex; justify-content: flex-end; gap: var(--sp-sm); }
+
+  /* ═══════════════════════════════════════
+     网盘与存储 Tab — 新增样式
+     ═══════════════════════════════════════ */
+  .storage-layout {
+    display: flex; gap: var(--sp-xl); width: 100%; max-width: 1000px;
+    align-items: flex-start;
+  }
+
+  /* 左：挂载盘列表 */
+  .drive-list { width: 320px; flex-shrink: 0; }
+  .drive-card {
+    background: var(--surface-primary);
+    border: 0.5px solid var(--border-default);
+    border-radius: var(--r-lg); overflow: hidden;
+    margin-bottom: var(--sp-sm); cursor: pointer;
+    transition: var(--anim-default);
+  }
+  .drive-card:hover   { border-color: var(--border-strong); }
+  .drive-card.active  { border-color: var(--accent); background: rgba(10,132,255,0.04); }
+  .drive-row {
+    display: flex; align-items: center; gap: var(--sp-sm);
+    padding: var(--sp-sm) var(--sp-md);
+  }
+  .drive-icon { font-size: 20px; flex-shrink: 0; }
+  .drive-info { flex: 1; min-width: 0; }
+  .drive-name { font-size: 14px; font-weight: 500; }
+  .drive-path { font-size: 12px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .drive-status { display: flex; align-items: center; gap: 4px; flex-shrink: 0; font-size: 12px; }
+  /* 协议徽章 */
+  .proto-badge {
+    padding: 2px 7px; border-radius: var(--r-sm); font-size: 10px;
+    font-weight: 700; letter-spacing: 0.04em; flex-shrink: 0;
+  }
+  .proto-smb     { background: rgba(10,132,255,0.15); color: var(--accent); }
+  .proto-webdav  { background: rgba(191,90,242,0.15); color: var(--char-0); }
+  .proto-nfs     { background: rgba(48,209,88,0.15);  color: var(--functional-success); }
+  .proto-jellyfin{ background: rgba(100,210,255,0.15); color: var(--functional-info); }
+  /* 用量条 */
+  .usage-row { padding: 0 var(--sp-md) var(--sp-sm); }
+  .usage-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-tertiary); margin-bottom: 3px; }
+
+  /* 右：诊断面板 */
+  .diag-panel {
+    flex: 1; min-width: 0;
+    background: var(--surface-primary);
+    border: 0.5px solid var(--border-default);
+    border-radius: var(--r-xl);
+    overflow: hidden;
+  }
+  .diag-header {
+    padding: var(--sp-md) var(--sp-xl);
+    border-bottom: 0.5px solid var(--border-default);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .diag-title { font-size: 15px; font-weight: 600; }
+  .diag-body  { padding: var(--sp-md) var(--sp-xl); }
+
+  /* 诊断指标行 */
+  .metric-section { margin-bottom: var(--sp-md); }
+  .metric-section-title {
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--text-tertiary);
+    margin-bottom: var(--sp-xs);
+  }
+  .metric-card {
+    background: var(--surface-secondary); border-radius: var(--r-lg);
+    overflow: hidden;
+  }
+  .metric-row {
+    display: flex; align-items: center; gap: var(--sp-md);
+    padding: 9px var(--sp-md);
+    border-bottom: 0.5px solid var(--border-default);
+  }
+  .metric-row:last-child { border-bottom: none; }
+  .metric-key  { font-size: 13px; color: var(--text-secondary); width: 80px; flex-shrink: 0; }
+  .metric-val  { font-size: 13px; font-weight: 500; flex: 1; font-variant-numeric: tabular-nums; }
+  .metric-bar  { width: 120px; flex-shrink: 0; }
+  .metric-tag  {
+    font-size: 11px; padding: 2px 7px; border-radius: var(--r-full); font-weight: 600;
+  }
+  .tag-ok   { background: rgba(48,209,88,0.15);  color: var(--functional-success); }
+  .tag-warn { background: rgba(255,214,0,0.15);   color: var(--functional-warning); }
+  .tag-err  { background: rgba(255,69,58,0.15);   color: var(--functional-error); }
+
+  /* RTT 实时闪烁 */
+  .rtt-live::after {
+    content: '●'; color: var(--functional-success); font-size: 8px;
+    vertical-align: super; margin-left: 3px;
+    animation: blink 1.5s ease-in-out infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+  /* 错误日志 */
+  .log-box {
+    background: #0a0a0a; border-radius: var(--r-md);
+    padding: var(--sp-sm) var(--sp-md);
+    font-family: 'SF Mono', monospace; font-size: 11px; line-height: 1.7;
+    max-height: 140px; overflow-y: auto;
+    border: 0.5px solid rgba(255,255,255,0.06);
+  }
+  .log-ts   { color: rgba(255,255,255,0.25); }
+  .log-ok   { color: var(--functional-success); }
+  .log-warn { color: var(--functional-warning); }
+  .log-err  { color: var(--functional-error); }
+
+  /* 操作区 */
+  .diag-actions {
+    padding: var(--sp-md) var(--sp-xl);
+    border-top: 0.5px solid var(--border-default);
+    display: flex; gap: var(--sp-sm); flex-wrap: wrap;
+  }
+</style>
+</head>
+<body>
+<nav class="mockup-nav">
+  <a class="nav-home" href="index.html">Mockups</a>
+  <span class="separator">/</span>
+  <span class="current">10 · 算力节点 + 网盘诊断</span>
+</nav>
+<div class="mockup-body" style="overflow:auto">
+<div class="page-wrap">
+
+  <!-- Tab 栏 -->
+  <div class="page-tabs">
+    <div class="ptab active" onclick="showTab('nodes',this)">🖥 算力节点</div>
+    <div class="ptab" onclick="showTab('storage',this)">📡 网盘与存储</div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       Tab 1：算力节点（原有内容）
+       ══════════════════════════════════ -->
+  <div id="tab-nodes" class="demo-wrap">
+    <!-- 算力节点设置 -->
+    <div class="settings-page">
+      <div class="page-title">算力节点</div>
+      <div class="page-desc">借用局域网或远程设备的 GPU 处理大型增强任务</div>
+      <div class="node-card expanded" onclick="toggleNode(this)">
+        <div class="node-header">
+          <span class="node-icon">🖥</span>
+          <div>
+            <div class="node-name">家里-RTX4090</div>
+            <div class="t-caption1 text-secondary">NVIDIA RTX 4090 · 24GB VRAM</div>
+          </div>
+          <div class="dot dot-online"></div>
+          <span class="node-rttt">RTT 3ms</span>
+          <button class="node-more" onclick="event.stopPropagation()">···</button>
+        </div>
+        <div class="node-body">
+          <div class="node-spec">可用预设：全部 · 队列：2 个任务</div>
+          <div class="perf-row"><span class="perf-label">GPU</span><div class="perf-bar"><div class="perf-fill" style="width:79%;background:var(--accent)"></div></div><span class="perf-val">79%</span></div>
+          <div class="perf-row"><span class="perf-label">温度</span><div class="perf-bar"><div class="perf-fill" style="width:51%;background:var(--functional-success)"></div></div><span class="perf-val">72°C</span></div>
+          <div class="perf-row"><span class="perf-label">上行</span><div class="perf-bar"><div class="perf-fill" style="width:60%;background:var(--functional-info)"></div></div><span class="perf-val">↑125 MB/s</span></div>
+          <div class="node-actions">
+            <button class="btn btn-secondary btn-sm">测试连接</button>
+            <button class="btn btn-secondary btn-sm">吊销信任</button>
+            <button class="btn btn-destructive btn-sm">删除</button>
+          </div>
+        </div>
+      </div>
+      <div class="node-card" onclick="toggleNode(this)">
+        <div class="node-header">
+          <span class="node-icon">🖥</span>
+          <div>
+            <div class="node-name">Mac mini M2 Pro</div>
+            <div class="t-caption1 text-secondary">Apple M2 Pro · 共享 16GB</div>
+          </div>
+          <div class="dot dot-offline"></div>
+          <span class="node-rttt" style="color:var(--text-tertiary)">离线</span>
+          <button class="node-more" onclick="event.stopPropagation()">···</button>
+        </div>
+      </div>
+      <div class="add-btn">+ 添加节点</div>
+    </div>
+
+    <!-- SMB 向导 -->
+    <div class="wizard">
+      <div style="font-size:12px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:var(--sp-sm)">添加网盘向导</div>
+      <div class="wizard-card">
+        <div class="wizard-header">
+          <span style="font-size:14px;font-weight:500">添加存储位置</span>
+          <div class="step-dots">
+            <div class="step-dot done"></div>
+            <div class="step-dot done"></div>
+            <div class="step-dot active"></div>
+            <div class="step-dot"></div>
+          </div>
+        </div>
+        <div class="wizard-body">
+          <div class="wizard-step" id="step1">
+            <div class="wizard-title">选择存储类型</div>
+            <div class="option-list">
+              <div class="option-item selected" onclick="selectOption(this)"><span class="option-icon">🖧</span><div><div class="option-label">SMB</div><div class="option-desc">局域网 NAS、Windows 共享</div></div></div>
+              <div class="option-item" onclick="selectOption(this)"><span class="option-icon">🌐</span><div><div class="option-label">WebDAV</div><div class="option-desc">HTTPS 远程存储</div></div></div>
+              <div class="option-item" onclick="selectOption(this)"><span class="option-icon">🍎</span><div><div class="option-label">Jellyfin</div><div class="option-desc">开源媒体服务器</div></div></div>
+            </div>
+          </div>
+          <div class="wizard-step" id="step2">
+            <div class="wizard-title">输入连接信息</div>
+            <div class="form-group"><div class="form-label">主机地址</div><input class="input" value="192.168.1.100"></div>
+            <div class="form-group"><div class="form-label">用户名</div><input class="input" value="admin"></div>
+            <div class="form-group"><div class="form-label">密码</div><input class="input" type="password" value="password123"></div>
+            <div class="test-result">✓ 连接成功，找到 342 个视频</div>
+          </div>
+          <div class="wizard-step active" id="step3">
+            <div class="wizard-title">选择挂载目录</div>
+            <div class="wizard-desc">只挂载需要的目录，避免扫描整个 NAS</div>
+            <div class="dir-tree">
+              <div class="dir-item">📁 /</div>
+              <div class="dir-indent">
+                <div class="dir-item selected">📁 Movies（342 个视频）</div>
+                <div class="dir-indent"><div class="dir-item">📁 Hollywood</div><div class="dir-item">📁 Anime</div></div>
+              </div>
+              <div class="dir-indent"><div class="dir-item" style="opacity:0.4">📁 Documents（无视频，灰显）</div></div>
+            </div>
+            <div style="font-size:13px;color:var(--text-secondary)">已选：/Movies</div>
+          </div>
+          <div class="wizard-step" id="step4">
+            <div class="wizard-title">完成设置</div>
+            <div class="form-group"><div class="form-label">挂载点名称</div><input class="input" value="家里的 NAS"></div>
+            <div style="background:var(--surface-secondary);border-radius:var(--r-md);padding:var(--sp-sm) var(--sp-md);font-size:13px;color:var(--text-secondary)">
+              <div>✓ smb://192.168.1.100/Movies</div>
+              <div style="color:var(--functional-success);margin-top:4px">✓ 连接正常，找到 342 个视频</div>
+            </div>
+          </div>
+        </div>
+        <div class="wizard-footer">
+          <button class="btn btn-secondary" onclick="prevStep()">← 返回</button>
+          <button class="btn btn-primary" onclick="nextStep()">下一步 →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       Tab 2：网盘与存储（新增）
+       ══════════════════════════════════ -->
+  <div id="tab-storage" class="demo-wrap" style="display:none">
+    <div class="storage-layout">
+
+      <!-- 左：挂载盘列表 -->
+      <div class="drive-list">
+        <div class="page-title" style="font-size:18px;margin-bottom:var(--sp-md)">已挂载存储</div>
+
+        <!-- NAS 1：在线，有警告 -->
+        <div class="drive-card active" onclick="selectDrive(this,'nas1')">
+          <div class="drive-row">
+            <span class="drive-icon">📡</span>
+            <div class="drive-info">
+              <div class="drive-name">家里的 NAS</div>
+              <div class="drive-path">smb://192.168.1.100/Movies</div>
+            </div>
+            <span class="proto-badge proto-smb">SMB</span>
+            <div class="drive-status">
+              <div class="dot dot-busy"></div>
+              <span style="color:var(--functional-warning);font-size:11px">延迟偏高</span>
+            </div>
+          </div>
+          <div class="usage-row">
+            <div class="usage-label"><span>已使用</span><span>3.2 TB / 8 TB</span></div>
+            <div class="progress-bar"><div class="progress-fill" style="width:40%;background:var(--functional-warning)"></div></div>
+          </div>
+        </div>
+
+        <!-- NAS 2：在线正常 -->
+        <div class="drive-card" onclick="selectDrive(this,'nas2')">
+          <div class="drive-row">
+            <span class="drive-icon">🌐</span>
+            <div class="drive-info">
+              <div class="drive-name">办公室 WebDAV</div>
+              <div class="drive-path">https://office.local/webdav/media</div>
+            </div>
+            <span class="proto-badge proto-webdav">WebDAV</span>
+            <div class="drive-status">
+              <div class="dot dot-online"></div>
+              <span style="color:var(--functional-success);font-size:11px">正常</span>
+            </div>
+          </div>
+          <div class="usage-row">
+            <div class="usage-label"><span>已使用</span><span>512 GB / 2 TB</span></div>
+            <div class="progress-bar"><div class="progress-fill" style="width:26%;background:var(--functional-success)"></div></div>
+          </div>
+        </div>
+
+        <!-- Jellyfin：在线 -->
+        <div class="drive-card" onclick="selectDrive(this,'jelly')">
+          <div class="drive-row">
+            <span class="drive-icon">🎬</span>
+            <div class="drive-info">
+              <div class="drive-name">Jellyfin 媒体库</div>
+              <div class="drive-path">http://192.168.1.50:8096</div>
+            </div>
+            <span class="proto-badge proto-jellyfin">Jellyfin</span>
+            <div class="drive-status">
+              <div class="dot dot-online"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- NFS：离线 -->
+        <div class="drive-card" onclick="selectDrive(this,'nfs')">
+          <div class="drive-row">
+            <span class="drive-icon">📂</span>
+            <div class="drive-info">
+              <div class="drive-name">旧 NFS 服务器</div>
+              <div class="drive-path">nfs://192.168.1.20/export/media</div>
+            </div>
+            <span class="proto-badge proto-nfs">NFS</span>
+            <div class="drive-status">
+              <div class="dot dot-error"></div>
+              <span style="color:var(--functional-error);font-size:11px">离线</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="add-btn" style="margin-top:var(--sp-xs)">+ 添加存储位置</div>
+      </div>
+
+      <!-- 右：诊断面板 -->
+      <div class="diag-panel" id="diagPanel">
+        <div class="diag-header">
+          <div>
+            <div class="diag-title" id="diagTitle">家里的 NAS · 诊断</div>
+            <div style="font-size:12px;color:var(--text-secondary);margin-top:2px" id="diagSubtitle">smb://192.168.1.100/Movies · SMBv3</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:var(--sp-xs)">
+            <div class="dot dot-busy" id="diagDot"></div>
+            <span style="font-size:13px;color:var(--functional-warning)" id="diagStatus">延迟偏高</span>
+          </div>
+        </div>
+        <div class="diag-body">
+
+          <!-- 连接质量 -->
+          <div class="metric-section">
+            <div class="metric-section-title">连接质量</div>
+            <div class="metric-card">
+              <div class="metric-row">
+                <span class="metric-key">RTT 延迟</span>
+                <span class="metric-val rtt-live" id="rttVal">128 ms</span>
+                <div class="metric-bar"><div class="progress-bar"><div class="progress-fill" style="width:64%;background:var(--functional-warning)"></div></div></div>
+                <span class="metric-tag tag-warn">偏高</span>
+              </div>
+              <div class="metric-row">
+                <span class="metric-key">上行带宽</span>
+                <span class="metric-val">↑ 42 MB/s</span>
+                <div class="metric-bar"><div class="progress-bar"><div class="progress-fill" style="width:42%;background:var(--accent)"></div></div></div>
+                <span class="metric-tag tag-ok">正常</span>
+              </div>
+              <div class="metric-row">
+                <span class="metric-key">下行带宽</span>
+                <span class="metric-val">↓ 98 MB/s</span>
+                <div class="metric-bar"><div class="progress-bar"><div class="progress-fill" style="width:98%;background:var(--functional-success)"></div></div></div>
+                <span class="metric-tag tag-ok">良好</span>
+              </div>
+              <div class="metric-row">
+                <span class="metric-key">丢包率</span>
+                <span class="metric-val">0.3%</span>
+                <div class="metric-bar"><div class="progress-bar"><div class="progress-fill" style="width:3%;background:var(--functional-warning)"></div></div></div>
+                <span class="metric-tag tag-ok">正常</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 服务器信息 -->
+          <div class="metric-section">
+            <div class="metric-section-title">服务器信息</div>
+            <div class="metric-card">
+              <div class="metric-row"><span class="metric-key">协议版本</span><span class="metric-val">SMB 3.1.1</span></div>
+              <div class="metric-row"><span class="metric-key">服务器名</span><span class="metric-val">SYNOLOGY-DS923</span></div>
+              <div class="metric-row"><span class="metric-key">挂载路径</span><span class="metric-val" style="font-family:monospace;font-size:12px">/Movies</span></div>
+              <div class="metric-row"><span class="metric-key">总容量</span><span class="metric-val">8 TB</span></div>
+              <div class="metric-row"><span class="metric-key">可用空间</span><span class="metric-val">4.8 TB</span><span class="metric-tag tag-ok" style="margin-left:auto">60% 可用</span></div>
+              <div class="metric-row"><span class="metric-key">上次连接</span><span class="metric-val">3 分钟前</span></div>
+              <div class="metric-row"><span class="metric-key">认证方式</span><span class="metric-val">Kerberos (NTLMv2)</span></div>
+            </div>
+          </div>
+
+          <!-- 错误日志 -->
+          <div class="metric-section">
+            <div class="metric-section-title" style="display:flex;justify-content:space-between;align-items:center">
+              错误日志
+              <button class="btn btn-ghost btn-sm" style="padding:2px 8px;font-size:11px">清除</button>
+            </div>
+            <div class="log-box">
+              <div><span class="log-ts">[06/04 21:14:32] </span><span class="log-warn">⚠</span> SMB 协商超时，重试 (1/3)，RTT=128ms</div>
+              <div><span class="log-ts">[06/04 21:14:33] </span><span class="log-ok">✓</span> 重连成功，RTT 恢复至 128ms</div>
+              <div><span class="log-ts">[06/04 19:02:11] </span><span class="log-warn">⚠</span> 读取 /Movies/复仇者联盟4.mkv 超时 (2048ms)</div>
+              <div><span class="log-ts">[06/04 18:55:04] </span><span class="log-ok">✓</span> 连接建立，SMBv3 · 带宽 98 MB/s</div>
+              <div><span class="log-ts">[06/04 08:03:27] </span><span class="log-warn">⚠</span> 网络切换，重新认证</div>
+              <div><span class="log-ts">[06/03 22:41:08] </span><span class="log-ok">✓</span> 扫描完成：342 个视频，新增 5 个</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 操作区 -->
+        <div class="diag-actions">
+          <button class="btn btn-primary btn-sm" onclick="simulateReconnect(this)">↺ 重新连接</button>
+          <button class="btn btn-secondary btn-sm">🔍 测速</button>
+          <button class="btn btn-secondary btn-sm">🗂 重新扫描</button>
+          <button class="btn btn-secondary btn-sm">✏ 编辑设置</button>
+          <button class="btn btn-destructive btn-sm" style="margin-left:auto">卸载</button>
+          <button class="btn btn-destructive btn-sm">🔑 吊销信任</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- /page-wrap -->
+</div>
+
+<script>
+/* ── Tab 切换 ── */
+function showTab(id, btn) {
+  document.querySelectorAll('.ptab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-nodes').style.display   = id === 'nodes'   ? 'flex' : 'none';
+  document.getElementById('tab-storage').style.display = id === 'storage' ? 'flex' : 'none';
+}
+
+/* ── 节点卡展开 ── */
+function toggleNode(card) { card.classList.toggle('expanded'); }
+
+/* ── 向导步骤 ── */
+function selectOption(el) {
+  el.parentElement.querySelectorAll('.option-item').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+}
+let step = 3;
+function nextStep() {
+  document.getElementById('step' + step).classList.remove('active');
+  step = Math.min(step + 1, 4);
+  document.getElementById('step' + step).classList.add('active');
+  updateDots();
+  if (step === 4) document.querySelector('.wizard-footer .btn-primary').textContent = '添加并开始扫描';
+}
+function prevStep() {
+  document.getElementById('step' + step).classList.remove('active');
+  step = Math.max(step - 1, 1);
+  document.getElementById('step' + step).classList.add('active');
+  updateDots();
+  document.querySelector('.wizard-footer .btn-primary').textContent = '下一步 →';
+}
+function updateDots() {
+  document.querySelectorAll('.step-dot').forEach((d, i) => {
+    d.className = 'step-dot' + (i < step - 1 ? ' done' : i === step - 1 ? ' active' : '');
+  });
+}
+
+/* ── 网盘诊断 ── */
+const driveData = {
+  nas1: {
+    title: '家里的 NAS · 诊断',
+    subtitle: 'smb://192.168.1.100/Movies · SMBv3',
+    dotClass: 'dot dot-busy', statusText: '延迟偏高', statusColor: 'var(--functional-warning)',
+    rtt: '128 ms', rttBarWidth: '64%', rttBarColor: 'var(--functional-warning)', rttTag: 'tag-warn', rttTagText: '偏高',
+  },
+  nas2: {
+    title: '办公室 WebDAV · 诊断',
+    subtitle: 'https://office.local/webdav/media · WebDAV',
+    dotClass: 'dot dot-online', statusText: '连接正常', statusColor: 'var(--functional-success)',
+    rtt: '8 ms', rttBarWidth: '8%', rttBarColor: 'var(--functional-success)', rttTag: 'tag-ok', rttTagText: '优秀',
+  },
+  jelly: {
+    title: 'Jellyfin 媒体库 · 诊断',
+    subtitle: 'http://192.168.1.50:8096 · Jellyfin API',
+    dotClass: 'dot dot-online', statusText: '连接正常', statusColor: 'var(--functional-success)',
+    rtt: '4 ms', rttBarWidth: '4%', rttBarColor: 'var(--functional-success)', rttTag: 'tag-ok', rttTagText: '优秀',
+  },
+  nfs: {
+    title: '旧 NFS 服务器 · 诊断',
+    subtitle: 'nfs://192.168.1.20/export/media · NFSv4',
+    dotClass: 'dot dot-error', statusText: '无法连接', statusColor: 'var(--functional-error)',
+    rtt: '—', rttBarWidth: '0%', rttBarColor: 'var(--functional-error)', rttTag: 'tag-err', rttTagText: '超时',
+  },
+};
+
+function selectDrive(card, id) {
+  document.querySelectorAll('.drive-card').forEach(c => c.classList.remove('active'));
+  card.classList.add('active');
+  const d = driveData[id];
+  if (!d) return;
+  document.getElementById('diagTitle').textContent    = d.title;
+  document.getElementById('diagSubtitle').textContent = d.subtitle;
+  document.getElementById('diagDot').className        = d.dotClass;
+  document.getElementById('diagStatus').textContent   = d.statusText;
+  document.getElementById('diagStatus').style.color   = d.statusColor;
+  document.getElementById('rttVal').textContent       = d.rtt;
+  // Update RTT bar
+  const bar = document.querySelector('#diagPanel .metric-row:first-child .progress-fill');
+  if (bar) { bar.style.width = d.rttBarWidth; bar.style.background = d.rttBarColor; }
+  const tag = document.querySelector('#diagPanel .metric-row:first-child .metric-tag');
+  if (tag) { tag.className = 'metric-tag ' + d.rttTag; tag.textContent = d.rttTagText; }
+}
+
+/* 重连模拟 */
+function simulateReconnect(btn) {
+  const orig = btn.textContent;
+  btn.textContent = '连接中…'; btn.disabled = true;
+  setTimeout(() => {
+    btn.textContent = orig; btn.disabled = false;
+    document.getElementById('diagStatus').textContent = '连接正常';
+    document.getElementById('diagStatus').style.color = 'var(--functional-success)';
+    document.getElementById('diagDot').className = 'dot dot-online';
+    document.getElementById('rttVal').textContent = '12 ms';
+  }, 1800);
+}
+
+/* RTT 实时模拟抖动 */
+setInterval(() => {
+  const el = document.getElementById('rttVal');
+  if (!el || el.textContent === '—') return;
+  const base = 120 + Math.round((Math.random() - 0.5) * 30);
+  el.textContent = base + ' ms';
+}, 1200);
+</script>
+</body>
+</html>
 <style>
   body { overflow-y: auto; height: auto; }
   .demo-wrap {

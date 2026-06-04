@@ -173,7 +173,7 @@
 | 05 | `05-character.html` | 角色系统（网格 + 详情页）| ✅ |
 | 06 | `06-variant-picker.html` | 副本选择弹窗 + 删除安全网 Toast | ✅ |
 | 07 | `08-enhancement.html` | 画质增强 + 音频增强浮窗 | ✅ |
-| 08 | `10-node-settings.html` | 算力节点设置 + SMB 网盘向导 | ✅ |
+| 08 | `10-node-settings.html` | 算力节点设置 + SMB 网盘向导 + 网盘诊断面板 | ✅ |
 | 09 | `11-subtitle-editor.html` | 字幕编辑器（三栏）| ✅ |
 | 10 | `12-hipixel-upload.html` | HiPixel 上传屏 | ✅ |
 | 11 | `13-hipixel-queue.html` | HiPixel 任务队列 | ✅ |
@@ -201,7 +201,7 @@
 | 3 | ~~**未知角色命名弹窗**~~ ✅ | 人脸缩略图组 + 输入框 + TMDB 候选 + 误聚类拆分确认弹窗 | `18-character-naming.html` | Phase 5 |
 | 4 | ~~**误聚类拆分流程**~~ ✅ | 流程步骤说明 + 拆分确认弹窗，合并于命名弹窗页面 | `18-character-naming.html` | Phase 5 |
 | 5 | ~~**在线字幕搜索结果列表**~~ ✅ | 多来源 + 语言过滤 + 评分 + 预览面板 + 哈希匹配 | `19-subtitle-search.html` | Phase 6 |
-| 6 | **网盘诊断面板** | 选中网盘后弹出详情：RTT / 带宽 / 错误日志 / 重连 / 吊销 | 待合并入 `10-node-settings.html` | Phase 7 |
+| 6 | ~~**网盘诊断面板**~~ ✅ | 挂载盘列表（4 种协议）+ RTT/带宽/丢包实时诊断 + 错误日志 + 重连/吊销操作，合并入 `10-node-settings.html` 新增「网盘与存储」Tab | `10-node-settings.html` 已更新 | Phase 7 |
 | 7 | ~~**HiPixel · 任务详情页**~~ ✅ | 阶段进度条 + 处理参数 + 关键帧报告 + 处理日志 | `20-hipixel-task-detail.html` | Phase 2 |
 | 8 | ~~**HiPixel · 用户设置 / 配额**~~ ✅ | 账户信息 + GPU 配额环 + API Key + 订阅计划 | `21-hipixel-settings.html` | Phase 2 |
 
