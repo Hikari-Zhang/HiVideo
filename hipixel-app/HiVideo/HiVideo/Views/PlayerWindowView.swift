@@ -89,22 +89,40 @@ struct PlayerWindowView: View {
 
 // MARK: - AVPlayerLayer View (NSViewRepresentable)
 
-/// NSView that uses AVPlayerLayer as its backing layer.
-/// Key: wantsLayer must be set BEFORE super.init so makeBackingLayer() fires at the right time.
 struct AVPlayerLayerView: NSViewRepresentable {
     let player: AVPlayer
 
-    func makeNSView(context: Context) -> AVKit.AVPlayerView {
-        let v = AVKit.AVPlayerView()
-        v.player = player
-        v.controlsStyle = .none      // 我们用自定义控制条
-        v.videoGravity   = .resizeAspect
-        return v
+    func makeCoordinator() -> Coordinator {
+        Coordinator(player: player)
     }
 
-    func updateNSView(_ nsView: AVKit.AVPlayerView, context: Context) {
-        if nsView.player !== player {
-            nsView.player = player
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        view.wantsLayer = true
+        view.layer?.backgroundColor = CGColor.black
+
+        // AVPlayerLayer を sublayer として追加
+        context.coordinator.playerLayer.frame = view.bounds
+        context.coordinator.playerLayer.autoresizingMask = [.layerWidthSizable, .layerHeightSizable]
+        view.layer?.addSublayer(context.coordinator.playerLayer)
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        context.coordinator.playerLayer.frame = nsView.bounds
+        CATransaction.commit()
+    }
+
+    // Coordinator 持有 AVPlayerLayer，避免 SwiftUI 重建时丢失
+    final class Coordinator: NSObject {
+        let playerLayer: AVPlayerLayer
+
+        init(player: AVPlayer) {
+            playerLayer = AVPlayerLayer(player: player)
+            playerLayer.videoGravity = .resizeAspect
+            playerLayer.backgroundColor = CGColor.black
         }
     }
 }
