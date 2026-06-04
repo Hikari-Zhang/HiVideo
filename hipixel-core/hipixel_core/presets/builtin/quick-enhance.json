@@ -1,0 +1,36 @@
+{
+  "$schema": "https://hipixel.dev/schemas/preset/v1.json",
+  "id": "quick-enhance",
+  "name": "Quick Enhance",
+  "description": "Balanced quality/speed preset. Light denoise + 2× upscale. Good for previews.",
+  "filters": [
+    {
+      "filter": "nafnet",
+      "params": {
+        "strength": 0.4,
+        "model": "NAFNet-REDS-width64",
+        "tile_size": 512
+      }
+    },
+    {
+      "filter": "real_esrgan",
+      "params": {
+        "scale": 2,
+        "model": "RealESRGAN_x2plus",
+        "tile_size": 512,
+        "tile_padding": 32
+      }
+    }
+  ],
+  "output": {
+    "resolution": "2x",
+    "fps": "preserve",
+    "codec": "h264",
+    "crf": 20,
+    "container": "mp4"
+  },
+  "requirements": {
+    "min_vram_mb": 2048,
+    "recommended_vram_mb": 4096
+  }
+}

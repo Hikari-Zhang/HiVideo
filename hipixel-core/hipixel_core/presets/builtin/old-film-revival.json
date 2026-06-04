@@ -1,0 +1,42 @@
+{
+  "$schema": "https://hipixel.dev/schemas/preset/v1.json",
+  "id": "old-film-revival",
+  "name": "Old Film Revival",
+  "description": "Restore and upscale vintage/damaged film footage. Denoise → 2× super-res → sharpen.",
+  "filters": [
+    {
+      "filter": "nafnet",
+      "params": {
+        "strength": 0.6,
+        "model": "NAFNet-REDS-width64",
+        "tile_size": 256
+      }
+    },
+    {
+      "filter": "real_esrgan",
+      "params": {
+        "scale": 2,
+        "model": "RealESRGAN_x2plus",
+        "tile_size": 512,
+        "tile_padding": 32
+      }
+    },
+    {
+      "filter": "cas",
+      "params": {
+        "sharpness": 0.4
+      }
+    }
+  ],
+  "output": {
+    "resolution": "2x",
+    "fps": "preserve",
+    "codec": "h265",
+    "crf": 18,
+    "container": "mp4"
+  },
+  "requirements": {
+    "min_vram_mb": 4096,
+    "recommended_vram_mb": 8192
+  }
+}

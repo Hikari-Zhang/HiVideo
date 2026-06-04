@@ -1,0 +1,33 @@
+{
+  "$schema": "https://hipixel.dev/schemas/preset/v1.json",
+  "id": "hdr-compatible",
+  "name": "HDR Compatible",
+  "description": "Convert HDR (scene-linear / HDR10) content to SDR for standard displays using ACES tone-mapping. No upscaling. CPU-only — no VRAM required.",
+  "filters": [
+    {
+      "filter": "aces",
+      "params": {
+        "exposure": 1.0,
+        "method": "aces_fitted",
+        "gamma": "srgb"
+      }
+    },
+    {
+      "filter": "cas",
+      "params": {
+        "sharpness": 0.2
+      }
+    }
+  ],
+  "output": {
+    "resolution": "source",
+    "fps": "preserve",
+    "codec": "h265",
+    "crf": 18,
+    "container": "mp4"
+  },
+  "requirements": {
+    "min_vram_mb": 0,
+    "recommended_vram_mb": 0
+  }
+}

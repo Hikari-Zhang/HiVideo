@@ -1,0 +1,266 @@
+================================================================================
+                    HIPIXEL-CORE LOGGING AUDIT - SUMMARY
+================================================================================
+
+ANALYSIS SCOPE: /Users/hikari/Documents/Git/HiVideo/hipixel-core/
+ANALYSIS DATE: 2026-05-30
+TOTAL FILES SCANNED: 30 Python files (hipixel_core + tests)
+
+================================================================================
+                            CRITICAL FINDINGS
+================================================================================
+
+1. NO LOGGING SYSTEM EXISTS
+   • Zero imports of Python's `logging` module
+   • No log files, no persistent audit trail
+   • No log levels (DEBUG, INFO, WARNING, ERROR)
+   • All diagnostics must be re-implemented from scratch
+
+2. CONSOLE OUTPUT IS CLI-ONLY
+   • 32 console.print() calls, ALL in cli.py
+   • Core modules (pipeline, backends, filters) have ZERO output
+   • Designed as silent library (good for reuse, bad for debugging)
+
+3. ERROR HANDLING IS FRAGMENTED
+   • ~35 raise statements across codebase
+   • No consistent exception types
+   • ~4 custom exceptions defined (ModelNotFoundError, etc.)
+   • Silent failures in probes (VRAM, platform detection)
+   • Only first thread error propagated; others lost
+
+4. PROGRESS TRACKING IS INCOMPLETE
+   • Progress bar only in CLI enhance command
+   • Progress bar for model downloads (models/manager.py)
+   • No per-filter progress, no VRAM tracking, no tile visibility
+   • ProgressEvent from pipeline has: frame_index, fps_avg, stage
+
+5. NO VERBOSITY CONTROL
+   • No --verbose or --quiet flags
+   • No way to suppress/redirect output
+   • No --log-file option
+   • No structured output (JSON, etc.)
+
+================================================================================
+                         DETAILED BREAKDOWN
+================================================================================
+
+CONSOLE OUTPUT LOCATIONS:
+  File: hipixel_core/cli.py
+    Lines with output: 49-50 (init), 118-217 (enhance), 240-286 (batch),
+                      311-380 (presets/models), 421-560 (info/bench)
+    Total calls: 32 console.print() + 5 Rich Progress bars
+    Types: errors, info messages, status updates, tables, progress
+
+  File: hipixel_core/models/manager.py
+    Lines: 202-217 (download progress)
+    Type: Rich Progress bar with download speed
+
+  All other files: 0 output calls
+
+EXCEPTION TYPES FOUND:
+  Custom (3):
+    • ModelNotFoundError (models/manager.py:38)
+    • ModelIntegrityError (models/manager.py:42)
+    • NotImplementedError (filters/rife.py:20)
+
+  Standard (10+):
+    • FileNotFoundError (video/decoder.py:40)
+    • ValueError (multiple locations)
+    • RuntimeError (multiple locations)
+    • KeyError (backends/cpu.py:134)
+    • ImportError (backends/cuda.py:58, coreml.py:64)
+    • typer.Exit (cli.py for exit codes)
+
+SILENT FAILURES (Caught & Ignored):
+  • backends/selector.py:56-57 — platform probes return False on error
+  • backends/cuda.py:134 — VRAM queries return 0 on error
+  • backends/coreml.py:192 — sysctl queries return 0 on error
+  • bench/runner.py:X — filter benchmarking exceptions silently caught
+
+ERROR AGGREGATION:
+  pipeline.py:241-242 — Collects exceptions from 3 threads, re-raises only first
+  Problem: decode_worker or process_worker errors may be lost
+
+================================================================================
+                         COMPONENT ANALYSIS
+================================================================================
+
+CLI (cli.py)
+  ✓ Provides: Console output, error messages, progress bars, tables, verbosity
+  ✗ Missing: File logging, structured output, verbosity flags
+  Output: 32 calls (most of codebase)
+  Rich usage: Console, Progress, BarColumn, Table, markup
+
+PIPELINE (pipeline.py)
+  ✓ Provides: Exception aggregation
+  ✗ Missing: All logging, filter progress, thread diagnostics
+  Output: 0 calls (silent)
+  Progress: Via callback to CLI only
+
+BACKENDS (backends/*.py)
+  ✓ Provides: Device info, VRAM probes, model loading
+  ✗ Missing: All logging, initialization details, conversion status
+  Output: 0 calls (silent)
+  Diagnostics: Computed but not logged (VRAM, GPU name, capabilities)
+  Special: CoreML ONNX→MLPackage conversion is silent (lines 159-167)
+
+FILTERS (filters/*.py)
+  ✓ Provides: Model loading via setup(), frame processing
+  ✗ Missing: All logging, tile strategy, VRAM usage, per-filter timing
+  Output: 0 calls (silent)
+  Special: Real-ESRGAN auto-tile calculation silent (real_esrgan.py:116-130)
+
+MODEL MANAGER (models/manager.py)
+  ✓ Provides: Rich Progress for downloads, integrity checking
+  ✗ Missing: Cache hit logging, mirror fallback logging, conversion logs
+  Output: 1 progress bar (download only), 0 other calls
+  Cache: Exists (~/.cache/hipixel-core/models/) but not logged
+
+VIDEO I/O (video/*.py)
+  ✓ Provides: ffprobe metadata extraction
+  ✗ Missing: All logging, FFmpeg process output
+  Output: 0 calls (FFmpeg stderr suppressed with -loglevel error)
+  Diagnostic info extracted but not logged: colorspace, HDR, audio streams
+
+BENCHMARKING (bench/runner.py)
+  ✓ Provides: Performance statistics collection
+  ✗ Missing: Per-run logging, warmup details, outlier detection
+  Output: 0 calls during run (silent)
+  Results: Stored in BenchmarkResult, can be exported as JSON/Markdown
+
+================================================================================
+                           BIGGEST GAPS
+================================================================================
+
+RANK  ISSUE                              IMPACT                        PRIORITY
+----  -----                              ------                        --------
+  1   No logging in filter execution     Can't identify failing filter  CRITICAL
+  2   Silent VRAM tracking               Can't diagnose OOM or tile    CRITICAL
+  3   Silent tile calculations           No visibility into tile size  HIGH
+  4   No verbosity control               Can't suppress output          HIGH
+  5   Only first thread error shown      Silent failures in I/O        HIGH
+  6   No CoreML conversion logging       Opaque model loading          MEDIUM
+  7   No backend selection logging       Can't debug auto-detection    MEDIUM
+  8   Silent model cache hits            Can't track cache efficiency  MEDIUM
+  9   No per-filter timing               Can't identify bottleneck     MEDIUM
+  10  No exception context               Errors lack backtrace/state   MEDIUM
+
+================================================================================
+                         DESIGN IMPLICATIONS
+================================================================================
+
+1. LIBRARY vs CLI DUALITY
+   • Core modules (pipeline, backends, filters) designed as silent libraries
+   • Only CLI (cli.py) provides user-facing output
+   • Enables library reuse but sacrifices debuggability
+
+2. RICH INTEGRATION
+   • Rich is already a dependency (13.7.0+)
+   • Already used: Console, Progress, Table, markup
+   • NOT used: logging.Handler, File rotation
+   • Recommendation: Use Rich for both console + file output
+
+3. THREADING ARCHITECTURE
+   • 3 daemon threads: decode → process → encode
+   • Exceptions from all threads collected in list
+   • Only first exception propagated (potential data loss)
+   • No per-thread logging means silent failures in I/O threads
+
+4. TILE-BASED PROCESSING
+   • Real-ESRGAN computes tile size based on VRAM (lines 116-130)
+   • Tile calculation is completely silent
+   • No logging of: tile count, tile size, overlap, tiling strategy
+   • Essential for debugging memory issues
+
+5. PLATFORM-SPECIFIC BACKENDS
+   • CoreML: Silent ONNX→MLPackage conversion (could take seconds)
+   • CUDA: Silent pynvml VRAM probes (could fail silently)
+   • CPU: Always available, no special handling
+   • Each backend needs targeted logging
+
+================================================================================
+                        RECOMMENDED NEXT STEPS
+================================================================================
+
+PHASE 1: CORE LOGGING (Week 1)
+  [ ] Create hipixel_core/logging.py with:
+      - get_logger(name) factory
+      - configure_logging(level, file=None) function
+      - Rich handler for console output
+  [ ] Add logger to each module:
+      - backends/__init__.py (backend logger)
+      - filters/__init__.py (filter logger)
+      - pipeline.py (pipeline logger)
+      - models/manager.py (models logger)
+      - video/*.py (I/O logger)
+  [ ] Key logging points:
+      - Backend init/device info
+      - Model loading start/end
+      - Filter setup/teardown
+      - Thread start/stop messages
+      - Exception context
+
+PHASE 2: CLI INTEGRATION (Week 1-2)
+  [ ] Add flags to cli.py:
+      - --verbose / -v (DEBUG level)
+      - --quiet / -q (WARNING level)
+      - --log-file FILE (write to file)
+      - --log-format FORMAT (json, text, etc.)
+  [ ] Configure logging from CLI
+  [ ] Route Rich Progress + logging.info to same console
+
+PHASE 3: EXTENDED DIAGNOSTICS (Week 2-3)
+  [ ] Per-filter timing logs
+  [ ] VRAM usage tracking
+  [ ] Tile strategy logging
+  [ ] Thread error aggregation (all errors, not just first)
+  [ ] Backend selection reasoning
+
+PHASE 4: STRUCTURED OUTPUT (Week 3-4)
+  [ ] JSON format option
+  [ ] Machine-readable timestamp, context
+  [ ] CI/monitoring integration
+  [ ] Log file rotation/archival
+
+================================================================================
+                            FILES PROVIDED
+================================================================================
+
+1. LOGGING_AUDIT_REPORT.md (23 KB)
+   • Full 14-section audit with line-by-line analysis
+   • Detailed findings for each component
+   • 500+ lines of reference material
+   • Use this for detailed design decisions
+
+2. LOGGING_QUICK_REFERENCE.md (4.8 KB)
+   • One-page summary of findings
+   • Quick lookup tables
+   • Implementation roadmap
+   • Use this for quick decisions
+
+3. This file (diagnostic_summary.txt)
+   • Executive summary of the audit
+   • Ranked gap analysis
+   • Design implications
+   • Next steps roadmap
+
+================================================================================
+                             CONCLUSION
+================================================================================
+
+The hipixel-core codebase currently has NO logging system. All output is
+console-only, confined to the CLI layer, and core modules are intentionally
+silent. This design is good for library reusability but bad for debugging,
+troubleshooting, and operational visibility.
+
+The logging architecture must be designed from scratch to cover:
+  1. Module-level logging with appropriate verbosity
+  2. CLI-controlled output (--verbose, --quiet, --log-file)
+  3. Exception context enrichment
+  4. Per-filter and per-thread diagnostics
+  5. VRAM tracking and tile-based processing visibility
+
+Implementation should follow Python logging conventions, leverage Rich for
+console formatting, and maintain backward compatibility with existing output.
+
+================================================================================

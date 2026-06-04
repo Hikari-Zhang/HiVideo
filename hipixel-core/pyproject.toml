@@ -1,0 +1,145 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hipixel-core"
+version = "0.1.0-alpha"
+description = "AI video enhancement engine for HiVideo and HiPixel"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.11"
+authors = [{ name = "HiVideo Contributors" }]
+keywords = ["video", "ai", "enhancement", "superresolution", "upscaling"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Video",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "typer[all]>=0.12.0",
+    "rich>=13.7.0",
+    "numpy>=1.26.0",
+    "Pillow>=10.3.0",
+    "scipy>=1.13.0",
+    "ffmpeg-python>=0.2.0",
+    "pydantic>=2.7.0",
+    "httpx>=0.27.0",
+    "onnxruntime>=1.18.0",
+]
+
+[project.optional-dependencies]
+# macOS Apple Silicon: native CoreML .mlpackage model support
+# Install with: pip install hipixel-core[coreml]
+coreml = ["coremltools>=8.0"]
+cuda = ["onnxruntime-gpu>=1.18.0"]
+convert = [
+    "torch",
+    "torchvision",
+    "basicsr",
+    "opencv-python-headless",
+]
+dev = [
+    "pytest>=8.2.0",
+    "pytest-cov>=5.0.0",
+    "pytest-asyncio>=0.23.0",
+    "ruff>=0.4.0",
+    "mypy>=1.10.0",
+    "types-Pillow",
+]
+benchmark = [
+    "pytest-benchmark>=4.0.0",
+]
+
+[project.scripts]
+hipixel-core = "hipixel_core.cli:app"
+
+[project.urls]
+Homepage = "https://github.com/hikari-dev/HiVideo"
+Documentation = "https://docs.hipixel.dev"
+Repository = "https://github.com/hikari-dev/HiVideo"
+Issues = "https://github.com/hikari-dev/HiVideo/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["hipixel_core"]
+
+# ---------------------------------------------------------------------------
+# ruff
+# ---------------------------------------------------------------------------
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["hipixel_core", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "SIM", # flake8-simplify
+    "C4",  # flake8-comprehensions
+    "TCH", # flake8-type-checking
+    "ANN", # flake8-annotations (partial)
+    "RUF", # ruff-specific
+]
+ignore = [
+    "ANN401", # dynamically typed expressions (Any) are disallowed
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["hipixel_core"]
+
+# ---------------------------------------------------------------------------
+# mypy
+# ---------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = false
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["ffmpeg.*", "onnxruntime.*", "coremltools.*", "scipy.*", "pynvml.*", "openvino.*"]
+ignore_missing_imports = true
+
+# ---------------------------------------------------------------------------
+# pytest
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = ["--strict-markers", "-ra"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "gpu: marks tests requiring GPU hardware",
+    "coreml: marks tests requiring Apple Silicon / CoreML",
+    "cuda: marks tests requiring CUDA GPU",
+]
+
+[tool.coverage.run]
+source = ["hipixel_core"]
+omit = ["tests/*", "benchmarks/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "\\.\\.\\.",
+]
+
+[dependency-groups]
+dev = [
+    "build>=1.5.0",
+]

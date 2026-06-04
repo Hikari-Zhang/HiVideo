@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+venv/
+.env
+
+# uv
+.uv/
+uv.lock
+
+# Testing / coverage
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# mypy
+.mypy_cache/
+
+# ruff
+.ruff_cache/
+
+# Model cache (use ~/.cache/hipixel-core instead)
+models_cache/
+
+# CoreML converted packages (generated, not source)
+*.mlpackage/
+*.mlmodel
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Benchmark artifacts
+.benchmarks/
+benchmark_results/
+
+# Temporary files
+*.tmp
+*.bak

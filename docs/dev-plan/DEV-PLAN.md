@@ -9,7 +9,7 @@
 
 | 阶段 | 状态 | 计划周 | 完成度 |
 |---|---|---|---|
-| Phase 0 · hipixel-core 内核抽离 + CLI（**Python 优先**） | 🔄 进行中 | 3 周 | ~80% |
+| Phase 0 · hipixel-core 内核抽离 + CLI（**Python 优先**） | 🔄 进行中 | 3 周 | ~98% |
 | **Phase 0.5 · UI/UX 设计与原型** | ⏸ 未开始 | **3 周** | 0% |
 | Phase 1 · HiVideo MVP 播放器 | ⏸ 未开始 | 6 周 | 0% |
 | Phase 2 · HiPixel MVP Web 服务 | ⏸ 未开始 | 5 周 | 0% |
@@ -40,11 +40,11 @@
 - [x] 🔴 在 HiVideo monorepo 下创建 `hipixel-core/` 子目录
 - [x] 🔴 ~~选择主语言~~（**已决策：Phase 0 Python 优先，Phase 2.5 迁移 Rust**）
 - [x] 🔴 配置 Python `pyproject.toml`（uv / Poetry 管理依赖）
-- [ ] 🔴 配置 GitHub Actions CI 矩阵：`macos-14` + `ubuntu-22.04` + `windows-2022`
+- [x] 🔴 配置 GitHub Actions CI 矩阵：`macos-14` + `ubuntu-22.04` + `windows-2022`（5 jobs：lint / test-macos / test-linux / test-windows / build，Python 3.11 + 3.12 矩阵，build 门控于三平台测试全通过）
 - [x] 🔴 引入 FFmpeg 依赖（系统检测 / 静态链接二选一）
 - [x] 🔴 引入 ONNX Runtime 跨平台依赖
 - [x] 🟡 配置 `cargo fmt` + `clippy` + `ruff` + `mypy` 一致性检查
-- [ ] 🟡 写 README + LICENSE（推荐 Apache 2.0）
+- [x] 🟡 写 README + LICENSE（推荐 Apache 2.0）（README 已更新：10 个内置预设、ACES 滤镜、3 平台 CI 徽章；LICENSE Apache 2.0 已存在）
 
 ### 0.2 GPU 后端抽象层（Day 3-5）
 
@@ -82,10 +82,10 @@
 ### 0.5 滤镜流水线（Day 11-12）
 
 - [x] 🔴 定义 `Filter` trait 和 `Pipeline` 概念
-- [ ] 🔴 实现 Anime4K v4 滤镜（动漫超分）
+- [x] 🔴 实现 Anime4K v4 滤镜（动漫超分）（`anime4k.py` 已实现，8 个测试覆盖）
 - [x] 🔴 实现 NAFNet 降噪滤镜（`nafnet.py` 已实现，NAFNet-REDS-width64.onnx URL 已更新）
 - [x] 🟡 实现 CAS 锐化滤镜（GPU shader）
-- [ ] 🟡 实现 ACES tone-mapping（HDR→SDR）
+- [x] 🟡 实现 ACES tone-mapping（HDR→SDR）（`aces.py`，Narkowicz ACES fitted + Reinhard，无模型 CPU 实现，11 个测试覆盖）
 - [ ] 🟡 实现 RIFE 插帧滤镜
 - [ ] 🟢 实现 DeOldify 上色滤镜
 - [x] 🔴 滤镜串联机制（Pipeline.chain([f1, f2, f3])）
@@ -94,12 +94,12 @@
 ### 0.6 预设系统（Day 13）
 
 - [x] 🔴 定义 `Preset` JSON Schema
-- [ ] 🔴 实现 7 个内置预设：
+- [x] 🔴 实现 7 个内置预设：
   - [x] 🔴 老片救星
   - [x] 🔴 番剧增强
-  - [ ] 🟡 黑白复刻
-  - [ ] 🟡 HDR 兼容
-  - [ ] 🟡 丝滑插帧 60fps
+  - [x] 🟡 黑白复刻（`bw-restoration.json`：重度 NAFNet 降噪 + RealESRGAN 2× + CAS）
+  - [x] 🟡 HDR 兼容（`hdr-compatible.json`：ACES tone-mapping + CAS，纯 CPU 无显存需求）
+  - [x] 🟡 丝滑插帧 60fps（`smooth-60fps.json`：NAFNet + RIFE v4.6，Phase 1 实现前 stub 占位）
   - [x] 🟡 极致修复
   - [x] 🟢 最快速度
 - [x] 🔴 预设加载与执行
@@ -115,7 +115,7 @@
 - [x] 🟡 `hipixel-core bench` 性能基准
 - [ ] 🟡 `hipixel-core demo` 演示模式
 - [x] 🟡 进度条（indicatif / rich）
-- [ ] 🟡 详细 / 安静日志级别
+- [x] 🟡 详细 / 安静日志级别
 
 ### 0.8 验证与基准（Day 16-18）
 
@@ -123,9 +123,11 @@
 - [ ] 🔴 在 M1 / M2 / M2 Max 上跑基准
 - [ ] 🟡 在 RTX 3060 / 4090 上跑基准（如有硬件）
 - [ ] 🟡 在 AMD / Intel Arc 上跑基准（如有硬件）
-- [ ] 🔴 输出性能对比表
+- [ ] 🔴 输出性能对比表（⚠ 阻塞于真实硬件 — 表格已在 `performance-tuning.md` 中占位）
 - [ ] 🟡 录制 demo 视频（before/after）
-- [ ] 🟡 撰写性能调优文档
+- [x] 🟡 撰写性能调优文档（`docs/architecture/performance-tuning.md`：tile 推理原理、期望 FPS 目标、调优旋钮、8 节完整文档）
+- [x] 🟡 基准框架实现（`hipixel_core/bench/`：`synthetic.py` 合成帧生成 + `runner.py` `BenchmarkRunner`/`BenchmarkResult`/`BenchmarkReport` + 64 个测试全部通过）
+- [x] 🟡 扩展 `bench` CLI（`--all-filters`、`--filter NAME`、`--output PATH`、`--format json|md|table`）
 
 ### 0.9 打包与发布（Day 19-21）
 

@@ -1,0 +1,229 @@
+name: hipixel-core CI
+
+on:
+  push:
+    paths:
+      - 'hipixel-core/**'
+      - '.github/workflows/hipixel-core.yml'
+  pull_request:
+    paths:
+      - 'hipixel-core/**'
+      - '.github/workflows/hipixel-core.yml'
+
+defaults:
+  run:
+    working-directory: hipixel-core
+
+env:
+  UV_CACHE_DIR: ~/.cache/uv
+
+jobs:
+  # -----------------------------------------------------------------------
+  # Lint & Type Check
+  # -----------------------------------------------------------------------
+  lint:
+    name: Lint & Type Check
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        run: uv python install 3.11
+
+      - name: Install dev dependencies
+        run: uv sync --extra dev
+
+      - name: ruff check
+        run: uv run ruff check .
+
+      - name: ruff format check
+        run: uv run ruff format --check .
+
+      - name: mypy
+        run: uv run mypy hipixel_core/
+
+  # -----------------------------------------------------------------------
+  # Tests — macOS (Apple Silicon runner)
+  # -----------------------------------------------------------------------
+  test-macos:
+    name: Test (macOS 14 / Apple Silicon)
+    runs-on: macos-14
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Cache uv packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.UV_CACHE_DIR }}
+          key: uv-macos-${{ matrix.python-version }}-${{ hashFiles('hipixel-core/pyproject.toml') }}
+          restore-keys: |
+            uv-macos-${{ matrix.python-version }}-
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      - name: Run tests (no GPU markers)
+        run: |
+          uv run pytest \
+            -m "not slow and not gpu and not cuda" \
+            --cov=hipixel_core \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            -v
+
+      - name: Upload coverage
+        if: matrix.python-version == '3.11'
+        uses: codecov/codecov-action@v4
+        with:
+          files: hipixel-core/coverage.xml
+          flags: macos
+          fail_ci_if_error: false
+
+  # -----------------------------------------------------------------------
+  # Tests — Linux (Ubuntu)
+  # -----------------------------------------------------------------------
+  test-linux:
+    name: Test (Ubuntu 22.04)
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system deps (FFmpeg)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Cache uv packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.UV_CACHE_DIR }}
+          key: uv-linux-${{ matrix.python-version }}-${{ hashFiles('hipixel-core/pyproject.toml') }}
+          restore-keys: |
+            uv-linux-${{ matrix.python-version }}-
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      - name: Run tests (no GPU markers)
+        run: |
+          uv run pytest \
+            -m "not slow and not gpu and not coreml and not cuda" \
+            --cov=hipixel_core \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            -v
+
+      - name: Upload coverage
+        if: matrix.python-version == '3.11'
+        uses: codecov/codecov-action@v4
+        with:
+          files: hipixel-core/coverage.xml
+          flags: linux
+          fail_ci_if_error: false
+
+  # -----------------------------------------------------------------------
+  # Tests — Windows
+  # -----------------------------------------------------------------------
+  test-windows:
+    name: Test (Windows 2022)
+    runs-on: windows-2022
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system deps (FFmpeg)
+        run: choco install ffmpeg --no-progress
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Cache uv packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.UV_CACHE_DIR }}
+          key: uv-windows-${{ matrix.python-version }}-${{ hashFiles('hipixel-core/pyproject.toml') }}
+          restore-keys: |
+            uv-windows-${{ matrix.python-version }}-
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      - name: Run tests (no GPU markers)
+        shell: bash
+        run: |
+          uv run pytest \
+            -m "not slow and not gpu and not coreml and not cuda" \
+            --cov=hipixel_core \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            -v
+
+      - name: Upload coverage
+        if: matrix.python-version == '3.11'
+        uses: codecov/codecov-action@v4
+        with:
+          files: hipixel-core/coverage.xml
+          flags: windows
+          fail_ci_if_error: false
+
+  # -----------------------------------------------------------------------
+  # Build package
+  # -----------------------------------------------------------------------
+  build:
+    name: Build wheel
+    runs-on: ubuntu-22.04
+    needs: [lint, test-linux, test-windows]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        run: uv python install 3.11
+
+      - name: Build
+        run: uv build
+
+      - name: Upload wheel artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hipixel-core-wheel
+          path: hipixel-core/dist/
+          retention-days: 7

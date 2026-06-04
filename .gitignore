@@ -1,8 +1,29 @@
 # macOS
 .DS_Store
 
-# WorkBuddy local data
+# WorkBuddy / Claude local data
 .workbuddy/
-
-# Claude Code local config
 .claude/
+.codebuddy/
+
+# Test / scratch videos and logs
+input.mp4
+output.mp4
+output_test.mp4
+enhance.log
+enhance_log.txt
+test_coreml_dynamic.py
+
+# Exploration-phase scratch scripts (hipixel-core root)
+hipixel-core/fix_x2plus_output.py
+hipixel-core/reexport_x2plus.py
+hipixel-core/test_coreml_native.py
+
+# hipixel-core Python build artifacts
+hipixel-core/dist/
+hipixel-core/.venv/
+hipixel-core/.pytest_cache/
+hipixel-core/.mypy_cache/
+hipixel-core/.ruff_cache/
+hipixel-core/.coverage
+hipixel-core/coverage.xml

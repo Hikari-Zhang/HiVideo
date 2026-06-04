@@ -1,0 +1,25 @@
+{
+  "$schema": "https://hipixel.dev/schemas/preset/v1.json",
+  "id": "sharpen-only",
+  "name": "Sharpen Only",
+  "description": "Apply CAS sharpening to slightly soft footage. No resolution change, minimal VRAM.",
+  "filters": [
+    {
+      "filter": "cas",
+      "params": {
+        "sharpness": 0.6
+      }
+    }
+  ],
+  "output": {
+    "resolution": "source",
+    "fps": "preserve",
+    "codec": "h265",
+    "crf": 18,
+    "container": "mp4"
+  },
+  "requirements": {
+    "min_vram_mb": 0,
+    "recommended_vram_mb": 0
+  }
+}

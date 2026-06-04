@@ -1,0 +1,27 @@
+{
+  "$schema": "https://hipixel.dev/schemas/preset/v1.json",
+  "id": "denoise-only",
+  "name": "Denoise Only",
+  "description": "Apply NAFNet denoising without resolution change. Preserves original resolution.",
+  "filters": [
+    {
+      "filter": "nafnet",
+      "params": {
+        "strength": 0.9,
+        "model": "NAFNet-REDS-width64",
+        "tile_size": 512
+      }
+    }
+  ],
+  "output": {
+    "resolution": "source",
+    "fps": "preserve",
+    "codec": "h265",
+    "crf": 16,
+    "container": "mp4"
+  },
+  "requirements": {
+    "min_vram_mb": 2048,
+    "recommended_vram_mb": 4096
+  }
+}

@@ -1,0 +1,141 @@
+╔════════════════════════════════════════════════════════════════════════════════╗
+║                  HIPIXEL-CORE ARCHITECTURE OVERVIEW                           ║
+╚════════════════════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ FILTER PROTOCOL (typing.Protocol + @runtime_checkable)                          │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                 │
+│  name: str                                                                      │
+│  required_models: list[str]        (registry keys to preload)                   │
+│                                                                                 │
+│  setup(backend, params) → None     (once, load models)                          │
+│  teardown(backend) → None          (cleanup, unload models)                     │
+│  process_frame(frame, backend, params) → VideoFrame  (MUST NOT MUTATE INPUT)    │
+│  estimated_vram_mb(resolution) → int               (for tile scheduling)       │
+│                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ INFERENCE BACKEND PROTOCOL (InferenceBackend)                                   │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                 │
+│  initialize() / shutdown()                                                      │
+│  load_model(path, key) / unload_model(key) / is_model_loaded(key)               │
+│  run(inputs: dict, key: str) → dict[str, ndarray]   **AUTO-REMAPS INPUT NAMES** │
+│  available_vram_mb() / warmup()                                                 │
+│                                                                                 │
+│  ✓ Implementations: CpuBackend (ONNX Runtime), CoreMLBackend, CudaBackend       │
+│                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────┬──────────────────────────┬───────────────────────────┐
+│   MODEL REGISTRY         │   FRAME FORMAT           │   FILTER TYPES            │
+├──────────────────────────┼──────────────────────────┼───────────────────────────┤
+│                          │                          │                           │
+│ registry.json            │ VideoFrame:              │ Super-resolution:         │
+│ ├─ models (dict)         │ ├─ data: ndarray         │ • RealESRGANFilter        │
+│ └─ Anime4K_v4_x2         │ │  (H, W, 3)             │   └─ Tile-based (512px)   │
+│    ├─ filename           │ │  uint8 or float32       │ • Anime4KFilter           │
+│    ├─ url               │ ├─ pts: float             │   └─ Tile-ready (512px)   │
+│    ├─ size_bytes        │ ├─ width, height         │                           │
+│    ├─ scale: 2          │ ├─ colorspace            │ Denoising:                │
+│    ├─ type: anime_sr    │ └─ is_hdr, metadata      │ • NAFNetFilter            │
+│    └─ version: 4.0.1    │                          │   └─ ONNX (no tile)       │
+│                          │ Methods:                 │                           │
+│ Cache: ~/.cache/         │ • to_float32() → [0,1]   │ Sharpening:               │
+│        hipixel-core/     │ • to_uint8() → [0,255]   │ • CASFilter               │
+│        models/           │ • resolution property    │   └─ CPU-only (no models)│
+│                          │                          │                           │
+└──────────────────────────┴──────────────────────────┴───────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ TILE-BASED INFERENCE (RealESRGANFilter reference pattern)                       │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                 │
+│  INPUT: (H, W, 3) float32 in [0,1]                                             │
+│    ↓                                                                             │
+│  TILE LOOP (step by tile_size, overlap by padding):                             │
+│    ├─ Extract patch with padding (clamped to bounds)                            │
+│    ├─ Transpose HWC → NCHW, add batch: (1, 3, ph, pw)                          │
+│    ├─ backend.run({"input": patch_t}, key) → {output_name: ndarray}             │
+│    ├─ Transpose NCHW → HWC: (ph*scale, pw*scale, 3)                            │
+│    └─ Accumulate with weight matrix (1.0 per contribution)                      │
+│    ↓                                                                             │
+│  STITCH: Normalize overlapping regions (divide by weight)                        │
+│  CLIP: np.clip(output, 0.0, 1.0)                                               │
+│    ↓                                                                             │
+│  OUTPUT: (H*scale, W*scale, 3) float32 in [0,1]                                │
+│                                                                                 │
+│  NO SEAMS: Weighted averaging handles overlap perfectly                         │
+│                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│ CPUBACKEND INPUT NAME REMAPPING (_remap_inputs)                                  │
+├──────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                  │
+│  Problem: Community ONNX models use arbitrary input names                        │
+│  ├─ Real-ESRGAN exports: "input", "lq"                                          │
+│  ├─ PyTorch common: "input.1"                                                   │
+│  └─ Anime4K may use: custom names                                               │
+│                                                                                  │
+│  Solution: Auto-remap by position (if names don't match)                        │
+│  └─ Caller always uses: {"input": tensor}                                       │
+│  └─ Backend maps: tensor → model's 1st input (regardless of name)               │
+│                                                                                  │
+│  Result: Filters work with any ONNX regardless of I/O names                     │
+│                                                                                  │
+└──────────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│ TEST INFRASTRUCTURE                                                              │
+├──────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                  │
+│  Synthetic ONNX Model (_make_identity_onnx):                                     │
+│  └─ Returns raw protobuf bytes (no onnx package needed)                          │
+│  └─ Supports custom input/output names                                          │
+│  └─ Used in: test_inference_e2e.py, test_filters.py                             │
+│                                                                                  │
+│  Frame Helpers:                                                                  │
+│  ├─ _synth_frame(w, h) → Random uint8 frame (seed=42)                           │
+│  ├─ _uniform_frame(w, h, val) → Uniform float32 (for tile-seam checks)          │
+│  └─ _create_test_video(path) → Synthetic video via FFmpeg lavfi                 │
+│                                                                                  │
+│  Test Classes:                                                                   │
+│  ├─ TestNAFNetSingleFrame (303-390)   — Strength blending                       │
+│  ├─ TestRealESRGANSingleFrame (397-495) — Tile stitching validation             │
+│  ├─ TestDynamicTileSize (708-794)     — VRAM-based tile sizing                  │
+│  └─ TestPipeline* (502-701)            — Full encode/decode/filter loops        │
+│                                                                                  │
+│  Key Pattern: Mock ModelManager.get_model_path to inject synthetic model        │
+│                                                                                  │
+└──────────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│ CURRENT ANIME4KFILTER STATUS                                                     │
+├──────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                  │
+│  ✓ Implemented:                                                                  │
+│  ├─ Protocol compliance (name, required_models, setup, teardown, etc.)          │
+│  ├─ Model loading via ModelManager.get_model_path()                             │
+│  ├─ Basic process_frame() (no-tile version)                                     │
+│  ├─ VRAM estimation (256 MB/MP)                                                 │
+│  └─ Registered in FILTER_REGISTRY                                               │
+│                                                                                  │
+│  ⚠ GAPS (Production Issues):                                                     │
+│  ├─ NO TILE-BASED INFERENCE                                                     │
+│  │  └─ Large frames (4K+) will cause OOM errors                                 │
+│  ├─ ONLY 2X SCALE IN REGISTRY                                                   │
+│  │  └─ No 4x variant registered (if it exists)                                  │
+│  └─ NO TILE TESTS                                                               │
+│     └─ Tile-seam validation missing (like RealESRGAN has)                       │
+│                                                                                  │
+│  RECOMMENDATION:                                                                 │
+│  Adopt RealESRGANFilter._tile_infer() pattern with:                             │
+│  ├─ tile_size=512 (good for anime)                                              │
+│  ├─ tile_padding=32 (overlap region)                                            │
+│  └─ Weighted averaging for seamless stitching                                   │
+│                                                                                  │
+└──────────────────────────────────────────────────────────────────────────────────┘
+

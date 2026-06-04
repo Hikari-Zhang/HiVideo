@@ -1,0 +1,64 @@
+{
+  "version": "1",
+  "models": {
+    "RealESRGAN_x2plus": {
+      "filename": "RealESRGAN_x2plus.onnx",
+      "url": "https://media.githubusercontent.com/media/salmanalfarisi11/Upscaler_images/main/model/Real-ESRGAN_x2plus.onnx",
+      "mirrors": [],
+      "sha256": "",
+      "size_bytes": 67075476,
+      "scale": 2,
+      "type": "superresolution",
+      "description": "Real-ESRGAN 2× upscale — general photographic and animated content",
+      "version": "0.2.1"
+    },
+    "NAFNet-REDS-width64": {
+      "filename": "NAFNet-REDS-width64.onnx",
+      "url": "https://huggingface.co/deepghs/image_restoration/resolve/main/NAFNet-REDS-width64.onnx",
+      "mirrors": [
+        "https://huggingface.co/deepghs/image_restoration/resolve/main/NAFNet-REDS-width64.onnx?download=true"
+      ],
+      "sha256": "",
+      "size_bytes": 275371113,
+      "scale": 1,
+      "type": "denoising",
+      "description": "NAFNet trained on REDS dataset — general video denoising/restoration",
+      "version": "1.0"
+    },
+    "RIFE_v4.6": {
+      "filename": "RIFE_v4.6.onnx",
+      "url": "",
+      "mirrors": [],
+      "sha256": "",
+      "size_bytes": 0,
+      "scale": 1,
+      "type": "frame_interpolation",
+      "description": "RIFE v4.6 — frame rate doubling via optical flow interpolation (Phase 1, ONNX export pending)",
+      "version": "4.6",
+      "phase": 1,
+      "available": false
+    },
+    "RealESRGAN_x4plus": {
+      "filename": "RealESRGAN_x4plus.onnx",
+      "url": "",
+      "mirrors": [],
+      "sha256": "",
+      "size_bytes": 0,
+      "scale": 4,
+      "type": "superresolution",
+      "description": "Real-ESRGAN 4× upscale — general photographic and animated content",
+      "version": "0.2.1",
+      "source_pth_url": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth",
+      "pth_name": "RealESRGAN_x4plus.pth",
+      "arch_config": {
+        "type": "RRDBNet",
+        "num_in_ch": 3,
+        "num_out_ch": 3,
+        "num_feat": 64,
+        "num_block": 23,
+        "num_grow_ch": 32,
+        "scale": 4
+      }
+    }
+  }
+}

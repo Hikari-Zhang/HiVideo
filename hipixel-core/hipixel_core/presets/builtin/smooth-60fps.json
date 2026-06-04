@@ -1,0 +1,35 @@
+{
+  "$schema": "https://hipixel.dev/schemas/preset/v1.json",
+  "id": "smooth-60fps",
+  "name": "Smooth 60fps",
+  "description": "Interpolate frames to 60fps for ultra-smooth playback using RIFE v4.6. Light denoise before interpolation to avoid artifact amplification. ⚠ Requires Phase 1 RIFE model — setup will raise NotImplementedError until Phase 1 ships.",
+  "filters": [
+    {
+      "filter": "nafnet",
+      "params": {
+        "strength": 0.2,
+        "model": "NAFNet-REDS-width64",
+        "tile_size": 512
+      }
+    },
+    {
+      "filter": "rife",
+      "params": {
+        "target_fps": 60,
+        "model": "RIFE_v4.6",
+        "tile_size": 512
+      }
+    }
+  ],
+  "output": {
+    "resolution": "source",
+    "fps": "60",
+    "codec": "h265",
+    "crf": 20,
+    "container": "mp4"
+  },
+  "requirements": {
+    "min_vram_mb": 4096,
+    "recommended_vram_mb": 8192
+  }
+}

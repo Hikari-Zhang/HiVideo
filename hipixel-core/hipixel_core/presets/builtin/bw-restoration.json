@@ -1,0 +1,42 @@
+{
+  "$schema": "https://hipixel.dev/schemas/preset/v1.json",
+  "id": "bw-restoration",
+  "name": "B&W Restoration",
+  "description": "Restore and upscale black-and-white film footage. Heavy denoise to remove grain and scratches → 2× super-resolution → subtle sharpening.",
+  "filters": [
+    {
+      "filter": "nafnet",
+      "params": {
+        "strength": 0.8,
+        "model": "NAFNet-REDS-width64",
+        "tile_size": 256
+      }
+    },
+    {
+      "filter": "real_esrgan",
+      "params": {
+        "scale": 2,
+        "model": "RealESRGAN_x2plus",
+        "tile_size": 512,
+        "tile_padding": 32
+      }
+    },
+    {
+      "filter": "cas",
+      "params": {
+        "sharpness": 0.35
+      }
+    }
+  ],
+  "output": {
+    "resolution": "2x",
+    "fps": "preserve",
+    "codec": "h265",
+    "crf": 16,
+    "container": "mp4"
+  },
+  "requirements": {
+    "min_vram_mb": 4096,
+    "recommended_vram_mb": 8192
+  }
+}

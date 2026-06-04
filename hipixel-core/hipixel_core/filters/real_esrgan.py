@@ -1,13 +1,13 @@
 """
-Anime4K v4 super-resolution filter — optimized for anime content.
+Real-ESRGAN super-resolution filter.
 
-Upscales video frames using the Anime4K v4 ONNX model with tile-based inference
-for efficient handling of large frames.
+Upscales video frames using the Real-ESRGAN model family.
+Supported models:
+    - RealESRGAN_x2plus  -- 2x upscale, general content
+    - RealESRGAN_x4plus  -- 4x upscale, general content
+    - RealESRNet_x4plus  -- 4x upscale, faster (lighter discriminator)
 
-Produces sharper edges and better color preservation than Real-ESRGAN
-on cel-shaded / anime-style content.
-
-Reference: https://github.com/bloc97/Anime4K
+Reference: https://github.com/xinntao/Real-ESRGAN
 """
 
 from __future__ import annotations
@@ -24,41 +24,43 @@ if TYPE_CHECKING:
     from hipixel_core.backends.base import InferenceBackend
     from hipixel_core.types import FilterParams
 
-_log = get_logger("filters.anime4k")
+_log = get_logger("filters.real_esrgan")
 
 
-#: VRAM budget (MB) per megapixel of input (empirical, lighter than Real-ESRGAN)
-_VRAM_MB_PER_MP: float = 256.0
+#: VRAM budget (MB) per megapixel of input (empirical, x2 model)
+_VRAM_MB_PER_MP: float = 512.0
 
 #: Model key used when loading into the backend
-_MODEL_KEY_PREFIX = "anime4k"
+_MODEL_KEY_PREFIX = "real_esrgan"
 
 
-class Anime4KFilter:
-    """Anime4K v4 upscaling filter with tile-based inference.
+class RealESRGANFilter:
+    """Real-ESRGAN super-resolution filter.
 
-    Implements tile-based inference to handle frames larger than VRAM
-    without memory pressure.
+    Implements tile-based inference to handle frames larger than VRAM.
 
     Preset parameters:
         scale (int):         Upscale factor: 2 or 4. Default: 2.
-        model (str):         Model variant. Default: "Anime4K_v4_Upscale_Denoise_x2".
+        model (str):         Model name. Default: "RealESRGAN_x2plus".
         tile_size (int):     Tile edge length in pixels. Default: 512.
-        tile_padding (int):  Overlap between tiles. Default: 16.
+        tile_padding (int):  Overlap between tiles. Default: 32.
+        half_precision (bool): Use FP16 for CUDA. Default: False (Phase 2).
     """
 
-    name: str = "anime4k"
+    name: str = "real_esrgan"
 
     #: Models shipped with hipixel-core
     SUPPORTED_MODELS: ClassVar[list[str]] = [
-        "Anime4K_v4_Upscale_Denoise_x2",
+        "RealESRGAN_x2plus",
+        "RealESRGAN_x4plus",
+        "RealESRNet_x4plus",
     ]
 
     def __init__(self) -> None:
         self._model_key: str = ""
         self._scale: int = 2
         self._tile_size: int = 512
-        self._tile_padding: int = 16
+        self._tile_padding: int = 32
 
     # ------------------------------------------------------------------
     # Filter Protocol
@@ -66,13 +68,26 @@ class Anime4KFilter:
 
     @property
     def required_models(self) -> list[str]:
-        return [self._model_key] if self._model_key else ["Anime4K_v4_Upscale_Denoise_x2"]
+        return [self._model_key] if self._model_key else ["RealESRGAN_x2plus"]
 
     def setup(self, backend: InferenceBackend, params: FilterParams) -> None:
         """Load model and store parameters."""
-        self._scale = int(params.get("scale", 2))
-        model_name: str = str(params.get("model", "Anime4K_v4_Upscale_Denoise_x2"))
-        self._tile_padding = int(params.get("tile_padding", 16))
+        # Default to x4plus (has working CoreML .mlpackage)
+        model_name: str = str(params.get("model", "RealESRGAN_x4plus"))
+        
+        # Auto-detect scale from model name if not explicitly set
+        if "scale" in params:
+            self._scale = int(params["scale"])
+        else:
+            # Infer scale from model name: x2plus → 2, x4plus → 4
+            if "x2" in model_name.lower():
+                self._scale = 2
+            elif "x4" in model_name.lower():
+                self._scale = 4
+            else:
+                self._scale = 4  # safe default
+        
+        self._tile_padding = int(params.get("tile_padding", 32))
         self._model_key = f"{_MODEL_KEY_PREFIX}_{model_name}"
 
         # Tile size: explicit param wins; otherwise auto-size from VRAM
@@ -82,19 +97,30 @@ class Anime4KFilter:
             self._tile_size = self._auto_tile_size(backend)
 
         _log.debug(
-            "Anime4KFilter.setup: scale=%d model=%s tile_size=%d tile_padding=%d",
+            "RealESRGANFilter.setup: scale=%d model=%s tile_size=%d tile_padding=%d",
             self._scale, model_name, self._tile_size, self._tile_padding,
         )
 
         from hipixel_core.models.manager import ModelManager
 
         model_path = ModelManager.get_model_path(model_name)
-        _log.debug("Anime4KFilter: loading model %s from %s", self._model_key, model_path)
+        _log.debug("RealESRGANFilter: loading model %s from %s", self._model_key, model_path)
         backend.load_model(model_path, self._model_key)
+
+        _log.warning(
+            "Warming up %s for hardware acceleration "
+            "(first-run CoreML compilation may take several minutes — cached after first use)",
+            model_name,
+        )
+        # Warmup with the ACTUAL inference shape: every patch is padded to
+        # (tile + 2*pad) × (tile + 2*pad) so CoreML only ever sees one shape.
+        warmup_size = self._tile_size + 2 * self._tile_padding
+        backend.warmup(self._model_key, (1, 3, warmup_size, warmup_size))
+        _log.debug("RealESRGANFilter: warmup complete")
 
     def teardown(self, backend: InferenceBackend) -> None:
         if self._model_key:
-            _log.debug("Anime4KFilter.teardown: unloading %s", self._model_key)
+            _log.debug("RealESRGANFilter.teardown: unloading %s", self._model_key)
             backend.unload_model(self._model_key)
 
     def process_frame(
@@ -103,7 +129,7 @@ class Anime4KFilter:
         backend: InferenceBackend,
         params: FilterParams,
     ) -> VideoFrame:
-        """Upscale a single frame via tiled Anime4K inference."""
+        """Upscale a single frame via tiled Real-ESRGAN inference."""
         f32 = frame.to_float32()
         output_data = self._tile_infer(f32.data, backend)
         return VideoFrame(
@@ -153,8 +179,11 @@ class Anime4KFilter:
         max_pixels = int(available_bytes / bytes_per_input_px)
         size = int(math.isqrt(max_pixels))
 
-        # Round down to nearest 64, clamp to [64, 1024]
-        size = max(64, min(1024, (size // 64) * 64))
+        # Round down to nearest 64, clamp to [64, 512]
+        # 512 → 576 px with default padding=32, which stays within the range
+        # that CoreML's NeuralNetwork EP can reliably dispatch to ANE/GPU.
+        # Tiles larger than ~600 px risk silent CPU fallback.
+        size = max(64, min(512, (size // 64) * 64))
         return size
 
     # ------------------------------------------------------------------
@@ -166,16 +195,26 @@ class Anime4KFilter:
         img: np.ndarray,
         backend: InferenceBackend,
     ) -> np.ndarray:
-        """Split ``img`` into tiles, run inference, stitch results."""
+        """Split ``img`` into tiles, run inference, stitch results.
+
+        Every patch is zero-padded to exactly ``(tile + 2*pad) × (tile + 2*pad)``
+        before inference so CoreML always sees the same input shape (matching the
+        warmup shape).  The corresponding output region is cropped back to the
+        actual tile size before accumulation.
+        """
+        import time as _time
+
         h, w = img.shape[:2]
         tile = self._tile_size
         pad = self._tile_padding
         scale = self._scale
+        target = tile + 2 * pad  # fixed inference shape on each side
 
         out_h, out_w = h * scale, w * scale
         output = np.zeros((out_h, out_w, 3), dtype=np.float32)
         weight = np.zeros((out_h, out_w, 1), dtype=np.float32)
 
+        tile_idx = 0
         for y in range(0, h, tile):
             for x in range(0, w, tile):
                 # Padded tile bounds (clamped to image)
@@ -184,13 +223,43 @@ class Anime4KFilter:
                 x2 = min(w, x + tile + pad)
                 y2 = min(h, y + tile + pad)
 
-                patch = img[y1:y2, x1:x2]  # (ph, pw, 3)
-                patch_t = np.transpose(patch, (2, 0, 1))[np.newaxis]  # NCHW
+                patch = img[y1:y2, x1:x2]  # (actual_ph, actual_pw, 3)
+                actual_ph, actual_pw = patch.shape[:2]
 
+                # Pad to fixed target shape so CoreML never sees a new input shape
+                if actual_ph < target or actual_pw < target:
+                    patch = np.pad(
+                        patch,
+                        ((0, target - actual_ph), (0, target - actual_pw), (0, 0)),
+                        mode="reflect",
+                    )
+
+                patch_t = np.ascontiguousarray(np.transpose(patch, (2, 0, 1))[np.newaxis])  # NCHW
+
+                t0 = _time.monotonic()
                 result = backend.run({"input": patch_t}, self._model_key)
+                elapsed_ms = (_time.monotonic() - t0) * 1000
+                # Log the first 3 tiles at WARNING so they appear without --verbose.
+                # After 3 tiles the pattern is established; subsequent tiles use DEBUG.
+                if tile_idx < 3:
+                    _log.warning(
+                        "_tile_infer: tile %d (%dx%d patch → %dx%d target) — %.0f ms",
+                        tile_idx, actual_ph, actual_pw, target, target, elapsed_ms,
+                    )
+                else:
+                    _log.debug(
+                        "_tile_infer: tile %d — %.0f ms", tile_idx, elapsed_ms,
+                    )
+                tile_idx += 1
+
                 out_patch = result.get("output", next(iter(result.values())))
-                # out_patch: (1, 3, ph*scale, pw*scale)
+                # out_patch: (1, 3, target*scale, target*scale)
                 out_patch = np.transpose(out_patch[0], (1, 2, 0))  # HWC
+
+                # Crop to the valid (non-padded) output region
+                valid_out_ph = actual_ph * scale
+                valid_out_pw = actual_pw * scale
+                out_patch = out_patch[:valid_out_ph, :valid_out_pw]
 
                 # Target slice in output (exclude padding contribution)
                 ox1 = x1 * scale
@@ -201,12 +270,14 @@ class Anime4KFilter:
                 output[oy1:oy2, ox1:ox2] += out_patch
                 weight[oy1:oy2, ox1:ox2] += 1.0
 
-        # Normalize overlapping regions
-        output = output / np.maximum(weight, 1.0)
-        return np.clip(output, 0.0, 1.0).astype(np.float32)
+        # Normalize overlapping regions — all in-place to avoid extra copies
+        np.maximum(weight, 1.0, out=weight)
+        output /= weight
+        np.clip(output, 0.0, 1.0, out=output)
+        return output
 
     def __repr__(self) -> str:
         return (
-            f"Anime4KFilter(scale={self._scale}, "
+            f"RealESRGANFilter(scale={self._scale}, "
             f"tile_size={self._tile_size}, model_key={self._model_key!r})"
         )
