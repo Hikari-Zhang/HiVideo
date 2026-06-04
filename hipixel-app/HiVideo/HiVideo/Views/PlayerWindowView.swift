@@ -92,30 +92,14 @@ struct PlayerWindowView: View {
 struct AVPlayerLayerView: NSViewRepresentable {
     let player: AVPlayer
 
-    func makeCoordinator() -> Coordinator {
-        Coordinator(player: player)
+    func makeCoordinator() -> Coordinator { Coordinator(player: player) }
+
+    func makeNSView(context: Context) -> PlayerHostView {
+        PlayerHostView(playerLayer: context.coordinator.playerLayer)
     }
 
-    func makeNSView(context: Context) -> NSView {
-        let coord = context.coordinator
-        let view  = NSView()
-
-        // 必须在 wantsLayer 之前赋值
-        view.layer      = coord.playerLayer
-        view.wantsLayer = true
-
-        print("[LayerView] makeNSView  playerLayer=\(coord.playerLayer)  player=\(String(describing: coord.playerLayer.player))  view.layer===playerLayer: \(view.layer === coord.playerLayer)")
-        return view
-    }
-
-    func updateNSView(_ nsView: NSView, context: Context) {
-        let coord = context.coordinator
-        print("[LayerView] updateNSView  bounds=\(nsView.bounds)  view.layer===playerLayer: \(nsView.layer === coord.playerLayer)  player=\(String(describing: coord.playerLayer.player))  readyForDisplay=\(coord.playerLayer.isReadyForDisplay)")
-        // 如果 layer 被替换，重新绑定
-        if nsView.layer !== coord.playerLayer {
-            print("[LayerView] ⚠️ layer was replaced! Re-assigning...")
-            nsView.layer = coord.playerLayer
-        }
+    func updateNSView(_ nsView: PlayerHostView, context: Context) {
+        // player 引用不变，布局由 layout() 处理
     }
 
     final class Coordinator: NSObject {
@@ -124,7 +108,30 @@ struct AVPlayerLayerView: NSViewRepresentable {
             playerLayer = AVPlayerLayer(player: player)
             playerLayer.videoGravity = .resizeAspect
             playerLayer.backgroundColor = CGColor.black
-            print("[Coordinator] init  playerLayer=\(playerLayer)  player=\(player)")
+        }
+    }
+
+    /// NSView 子类，override layout() 确保 AVPlayerLayer 随视图尺寸变化
+    final class PlayerHostView: NSView {
+        private let playerLayer: AVPlayerLayer
+
+        init(playerLayer: AVPlayerLayer) {
+            self.playerLayer = playerLayer
+            super.init(frame: .zero)
+            // layer 必须在 wantsLayer 之前赋值
+            layer      = playerLayer
+            wantsLayer = true
+        }
+        required init?(coder: NSCoder) { fatalError() }
+
+        override func layout() {
+            super.layout()
+            // 每次 bounds 变化都同步 layer frame（这是 updateNSView 无法做到的）
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            playerLayer.frame = bounds
+            CATransaction.commit()
+            print("[PlayerHostView] layout() bounds=\(bounds) readyForDisplay=\(playerLayer.isReadyForDisplay)")
         }
     }
 }
