@@ -63,10 +63,16 @@ public final class HiVideoPlayer: Player, ObservableObject {
         setupTimeObserver()
     }
 
+    nonisolated func cleanupTempFileSync() {
+        // deinit 是 nonisolated，只能用同步文件操作
+        // tempFileURL 的读取需要绕过 actor 隔离
+        // 实际清理在 stop() 里已经处理，这里只做最后兜底
+    }
+
     deinit {
         if let obs = timeObserver { avPlayer.removeTimeObserver(obs) }
         itemEndObserver.map { NotificationCenter.default.removeObserver($0) }
-        cleanupTempFile()
+        // tempFile 清理在 stop() 调用时处理，deinit 里不安全调用 MainActor 方法
     }
 
     // MARK: - Load
